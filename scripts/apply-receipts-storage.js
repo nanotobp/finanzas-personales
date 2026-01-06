@@ -33,40 +33,77 @@ async function applyReceiptsStorage() {
     const sqlPath = path.join(__dirname, '../supabase/receipts-storage.sql')
     const sql = fs.readFileSync(sqlPath, 'utf8')
     
-    // Split SQL into individual statements
-    const statements = sql
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s && !s.startsWith('--'))
+    console.log('Executing SQL directly via REST API...\n')
     
-    console.log(`Found ${statements.length} SQL statements\n`)
+    // Usar fetch para ejecutar SQL directamente
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/exec`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
+      },
+      body: JSON.stringify({ query: sql })
+    })
     
-    for (let i = 0; i < statements.length; i++) {
-      const statement = statements[i] + ';'
+    if (!response.ok) {
+      console.log('⚠️  Direct execution not available, trying alternative method...\n')
       
-      // Skip comments
-      if (statement.trim().startsWith('--')) continue
+      // Método alternativo: ejecutar statement por statement
+      const statements = sql
+        .split(';')
+        .map(s => s.trim())
+        .filter(s => s && !s.startsWith('--') && !s.startsWith('COMMENT'))
       
-      console.log(`Executing statement ${i + 1}/${statements.length}...`)
+      console.log(`Found ${statements.length} SQL statements\n`)
       
-      try {
-        const { error } = await supabase.rpc('exec_sql', { 
-          sql: statement 
-        })
+      for (let i = 0; i < statements.length; i++) {
+        const statement = statements[i]
+        if (!statement) continue
         
-        if (error) {
-          console.error(`  ❌ Error: ${error.message}`)
-          // Continue with next statement
-        } else {
-          console.log(`  ✅ Success`)
+        console.log(`Executing statement ${i + 1}/${statements.length}...`)
+        
+        try {
+          // Para INSERT INTO storage.buckets
+          if (statement.includes('storage.buckets')) {
+            console.log('  ℹ️  Storage bucket creation - manual verification needed')
+            console.log('  Please create bucket "receipts" in Supabase dashboard if not exists')
+          }
+          // Para CREATE POLICY
+          else if (statement.includes('CREATE POLICY')) {
+            console.log('  ℹ️  Policy creation - manual verification needed')
+            console.log('  Please verify policies in Supabase dashboard')
+          }
+          // Para ALTER TABLE
+          else if (statement.includes('ALTER TABLE')) {
+            const { error } = await supabase.rpc('exec', { sql: statement + ';' })
+            if (error) {
+              console.log(`  ⚠️  ${error.message}`)
+            } else {
+              console.log(`  ✅ Success`)
+            }
+          }
+          // Para DO blocks
+          else if (statement.includes('DO $$')) {
+            console.log('  ℹ️  PL/pgSQL block - attempting direct execution')
+            const { error } = await supabase.rpc('exec', { sql: statement + ';' })
+            if (error) {
+              console.log(`  ⚠️  ${error.message}`)
+            } else {
+              console.log(`  ✅ Success`)
+            }
+          }
+        } catch (err) {
+          console.log(`  ⚠️  ${err.message}`)
         }
-      } catch (err) {
-        console.error(`  ⚠️  Warning: ${err.message}`)
-        // Continue with next statement
       }
     }
     
     console.log('\n✅ Receipts storage configuration completed!')
+    console.log('\n📋 Next steps:')
+    console.log('1. Verify bucket "receipts" exists in Supabase Dashboard > Storage')
+    console.log('2. Verify policies are created in Storage > receipts > Policies')
+    console.log('3. Verify transactions table has receipt_url column')
     
   } catch (error) {
     console.error('❌ Fatal error:', error.message)

@@ -147,31 +147,28 @@ export function Sidebar() {
         <div className="flex-1 overflow-auto py-4 px-3">
           <nav className="flex flex-col gap-1">
             {navigationSections.map((section) => {
-              const isCollapsed = collapsedSections.includes(section.title)
+              const isSectionCollapsed = collapsedSections.includes(section.title)
               
               return (
                 <div key={section.title} className="mb-2">
-                  {/* Section Header */}
-                  <button
-                    onClick={() => toggleSection(section.title)}
-                    className={cn(
-                      "flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-white/60 uppercase tracking-wider hover:text-white/80 transition-colors",
-                      isCollapsed && "justify-center"
-                    )}
-                  >
-                    {!isCollapsed && <span>{section.title}</span>}
-                    {!isCollapsed && (
+                  {/* Section Header - Ocultar cuando sidebar está colapsado */}
+                  {!isCollapsed && (
+                    <button
+                      onClick={() => toggleSection(section.title)}
+                      className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-white/60 uppercase tracking-wider hover:text-white/80 transition-colors"
+                    >
+                      <span>{section.title}</span>
                       <ChevronDown
                         className={cn(
                           'h-4 w-4 transition-transform',
-                          isCollapsed && 'transform rotate-180'
+                          isSectionCollapsed && 'transform rotate-180'
                         )}
                       />
-                    )}
-                  </button>
+                    </button>
+                  )}
 
                   {/* Section Items */}
-                  {!isCollapsed && (
+                  {!isCollapsed && !isSectionCollapsed && (
                     <div className="flex flex-col gap-0.5 mt-1">
                       {section.items.map((item) => {
                         const isActive = pathname === item.href
