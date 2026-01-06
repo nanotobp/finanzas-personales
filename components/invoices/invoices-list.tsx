@@ -173,52 +173,55 @@ export function InvoicesList() {
     }, {})
 
     const months = Object.keys(monthlyData || {}).sort().slice(-6)
-    
+
     return {
-    title: {
-      text: 'Ingresos Últimos 6 Meses',
-      left: 'center',
-      textStyle: { fontSize: 14 }
-    },
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' }
-    },
-    legend: {
-      bottom: 0,
-      data: ['Cobrado', 'Pendiente']
-    },
-    xAxis: {
-      type: 'category',
-      data: months.map(m => {
-        const [year, month] = m.split('-')
-        return `${month}/${year.substring(2)}`
-      })
-    },
-    yAxis: {
-      type: 'value',
-      axisLabel: {
-        formatter: (value: number) => `₲${(value / 1000).toFixed(0)}k`
-      }
-    },
-    series: [
-      {
-        name: 'Cobrado',
-        type: 'bar',
-        stack: 'total',
-        data: months.map(m => monthlyData?.[m]?.paid || 0),
-        itemStyle: { color: '#10b981' }
+      title: {
+        text: 'Ingresos Últimos 6 Meses',
+        left: 'center',
+        textStyle: { fontSize: 14 }
       },
-      {
-        name: 'Pendiente',
-        type: 'bar',
-        stack: 'total',
-        data: months.map(m => monthlyData?.[m]?.pending || 0),
-        itemStyle: { color: '#f59e0b' }
-      }
-    ]
-  }
-}, [invoices])
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        valueFormatter: (value: number) => `Gs. ${Math.round(value).toLocaleString('es-PY')}`
+      },
+      legend: {
+        bottom: 0,
+        data: ['Cobrado', 'Pendiente']
+      },
+      xAxis: {
+        type: 'category',
+        data: months.map(m => {
+          const [year, month] = m.split('-')
+          return `${month}/${year.substring(2)}`
+        })
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          formatter: (value: number) => `Gs. ${Math.round(value).toLocaleString('es-PY')}`
+        }
+      },
+      series: [
+        {
+          name: 'Cobrado',
+          type: 'bar',
+          data: months.map(m => monthlyData?.[m]?.paid || 0),
+          itemStyle: { color: '#10b981' },
+          barGap: 0,
+          barCategoryGap: '40%'
+        },
+        {
+          name: 'Pendiente',
+          type: 'bar',
+          data: months.map(m => monthlyData?.[m]?.pending || 0),
+          itemStyle: { color: '#f59e0b' },
+          barGap: 0,
+          barCategoryGap: '40%'
+        }
+      ]
+    }
+  }, [invoices])
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: any; label: string; icon: any }> = {

@@ -70,7 +70,8 @@ export function IncomeExpensesChart() {
       borderWidth: 1,
       textStyle: {
         color: '#333'
-      }
+      },
+      valueFormatter: (value) => `Gs. ${Math.round(value).toLocaleString('es-PY')}`
     },
     legend: {
       data: ['Ingresos', 'Gastos'],
@@ -105,7 +106,7 @@ export function IncomeExpensesChart() {
       },
       axisLabel: {
         color: '#6b7280',
-        formatter: '${value}k'
+        formatter: (value) => `Gs. ${Math.round(value).toLocaleString('es-PY')}`
       },
       splitLine: {
         lineStyle: {

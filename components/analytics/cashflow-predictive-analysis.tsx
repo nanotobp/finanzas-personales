@@ -316,14 +316,14 @@ export function CashflowPredictiveAnalysis() {
                 </linearGradient>
               </defs>
               <XAxis dataKey="month" stroke="#888888" fontSize={12} />
-              <YAxis stroke="#888888" fontSize={12} tickFormatter={(value: number) => `Gs ${(value / 1000).toFixed(0)}k`} />
+              <YAxis stroke="#888888" fontSize={12} tickFormatter={(value: number) => `Gs. ${Math.round(value).toLocaleString('es-PY')}`} />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: 'rgba(255, 255, 255, 0.95)', 
                   border: '1px solid #ccc',
                   borderRadius: '8px'
                 }}
-                formatter={(value: any) => formatCurrency(value)}
+                formatter={(value: any) => `Gs. ${Math.round(value).toLocaleString('es-PY')}`}
               />
               <Legend />
               <Area 
