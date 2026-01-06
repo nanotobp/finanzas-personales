@@ -1,21 +1,12 @@
 'use client'
 
 import { InvoiceFormDialog } from '@/components/invoices/invoice-form-dialog'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, FilePlus } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 export default function NewInvoicePage() {
-  const [isOpen, setIsOpen] = useState(true)
-  const router = useRouter()
-
-  const handleClose = () => {
-    setIsOpen(false)
-    router.push('/invoices')
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -32,11 +23,24 @@ export default function NewInvoicePage() {
         </div>
       </div>
 
-      <InvoiceFormDialog
-        open={isOpen}
-        onOpenChange={setIsOpen}
-        onSuccess={handleClose}
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Nueva Factura</CardTitle>
+          <CardDescription>
+            Completa los datos para generar una factura
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <InvoiceFormDialog 
+            trigger={
+              <Button size="lg" className="w-full">
+                <FilePlus className="mr-2 h-5 w-5" />
+                Crear Factura
+              </Button>
+            }
+          />
+        </CardContent>
+      </Card>
     </div>
   )
 }
