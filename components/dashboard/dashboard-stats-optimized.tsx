@@ -95,7 +95,7 @@ export const DashboardStats = memo(function DashboardStats({ userId }: Dashboard
         netChange: 1.98,
       }
     },
-    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
+    staleTime: 0, // Sin cache, siempre datos frescos
     gcTime: 10 * 60 * 1000,
   })
 
