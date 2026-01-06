@@ -307,11 +307,7 @@ export function Header({ user }: HeaderProps) {
                   Perfil
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
-                  // Forzar refetch de queries del dashboard
-                  if (window && window.__REACT_QUERY_CLIENT__) {
-                    window.__REACT_QUERY_CLIENT__.invalidateQueries()
-                  }
-                  // Alternativamente, recargar la página
+                  // Recargar la página para actualizar datos
                   window.location.reload()
                 }}>
                   <RefreshCw className="mr-2 h-4 w-4" />
