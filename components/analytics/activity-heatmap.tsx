@@ -61,7 +61,7 @@ export function ActivityHeatmap() {
   const last90Days = getLast90Days()
 
   const getIntensity = (date: string) => {
-    const dayData = heatmapData.find((d: any) => d.date === date)
+    const dayData = heatmapData.find((d: any) => d.date === date) as { date: string; total: number; count: number } | undefined
     if (!dayData) return 0
     const percentage = (dayData.total / maxAmount) * 100
     if (percentage === 0) return 0
@@ -118,7 +118,7 @@ export function ActivityHeatmap() {
                   </div>
                   {week.map((date, dayIndex) => {
                     const intensity = getIntensity(date)
-                    const dayData = heatmapData.find((d: any) => d.date === date)
+                    const dayData = heatmapData.find((d: any) => d.date === date) as { date: string; total: number; count: number } | undefined
                     return (
                       <div
                         key={dayIndex}

@@ -56,7 +56,7 @@ export function DebtToIncomeRatio() {
       const debtCategories = ['préstamo', 'crédito', 'deuda', 'tarjeta']
       const additionalDebt = debtExpenses
         .filter(t => t.categories && debtCategories.some(cat => 
-          t.categories.name.toLowerCase().includes(cat)
+          ((t.categories as any)?.name || '').toLowerCase().includes(cat)
         ))
         .reduce((sum, t) => sum + Number(t.amount), 0) / 3
 

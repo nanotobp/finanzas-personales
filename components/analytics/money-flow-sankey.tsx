@@ -5,6 +5,50 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts'
 
+const CustomTreemapContent = (props: any) => {
+  const { x, y, width, height, name, value, totalExpenses } = props
+  const percentage = ((value / totalExpenses) * 100).toFixed(0)
+  
+  return (
+    <g>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        style={{
+          fill: `hsl(${(value / totalExpenses) * 360}, 70%, 60%)`,
+          stroke: '#fff',
+          strokeWidth: 2,
+        }}
+      />
+      {width > 60 && height > 30 && (
+        <>
+          <text
+            x={x + width / 2}
+            y={y + height / 2 - 10}
+            textAnchor="middle"
+            fill="#fff"
+            fontSize={14}
+            fontWeight="bold"
+          >
+            {name}
+          </text>
+          <text
+            x={x + width / 2}
+            y={y + height / 2 + 10}
+            textAnchor="middle"
+            fill="#fff"
+            fontSize={12}
+          >
+            {percentage}%
+          </text>
+        </>
+      )}
+    </g>
+  )
+}
+
 export function MoneyFlowSankey() {
   const supabase = createClient()
 
@@ -29,8 +73,8 @@ export function MoneyFlowSankey() {
       // Agrupar por categoría
       const categoryMap = new Map()
       transactions?.forEach(t => {
-        const category = t.categories?.name || 'Sin categoría'
-        const current = categoryMap.get(category) || { name: category, value: 0, color: t.categories?.color || '#94a3b8' }
+        const category = (t.categories as any)?.name || 'Sin categoría'
+        const current = categoryMap.get(category) || { name: category, value: 0, color: (t.categories as any)?.color || '#94a3b8' }
         current.value += Number(t.amount)
         categoryMap.set(category, current)
       })
@@ -76,47 +120,6 @@ export function MoneyFlowSankey() {
             dataKey="value"
             stroke="#fff"
             fill="#8b5cf6"
-            content={({ x, y, width, height, name, value }: any) => {
-              const percentage = ((value / totalExpenses) * 100).toFixed(0)
-              return (
-                <g>
-                  <rect
-                    x={x}
-                    y={y}
-                    width={width}
-                    height={height}
-                    style={{
-                      fill: `hsl(${(value / totalExpenses) * 360}, 70%, 60%)`,
-                      stroke: '#fff',
-                      strokeWidth: 2,
-                    }}
-                  />
-                  {width > 60 && height > 30 && (
-                    <>
-                      <text
-                        x={x + width / 2}
-                        y={y + height / 2 - 10}
-                        textAnchor="middle"
-                        fill="#fff"
-                        fontSize={14}
-                        fontWeight="bold"
-                      >
-                        {name}
-                      </text>
-                      <text
-                        x={x + width / 2}
-                        y={y + height / 2 + 10}
-                        textAnchor="middle"
-                        fill="#fff"
-                        fontSize={12}
-                      >
-                        {percentage}%
-                      </text>
-                    </>
-                  )}
-                </g>
-              )
-            }}
           >
             <Tooltip content={<CustomTooltip />} />
           </Treemap>

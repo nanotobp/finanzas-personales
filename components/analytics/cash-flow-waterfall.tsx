@@ -36,11 +36,11 @@ export function CashFlowWaterfall() {
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + Number(t.amount), 0)
 
-      const expensesByCategory: any = {}
+      const expensesByCategory: Record<string, number> = {}
       data
         .filter(t => t.type === 'expense')
         .forEach(t => {
-          const category = t.categories?.name || 'Sin categoría'
+          const category = (t.categories as any)?.name || 'Sin categoría'
           if (!expensesByCategory[category]) {
             expensesByCategory[category] = 0
           }
@@ -64,7 +64,7 @@ export function CashFlowWaterfall() {
 
       // Construir datos waterfall
       let cumulative = 0
-      const waterfallData = [
+      const waterfallData: any[] = [
         { name: 'Ingresos', value: income, cumulative: 0, end: income, isPositive: true }
       ]
 
