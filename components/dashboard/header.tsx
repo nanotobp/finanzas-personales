@@ -306,6 +306,17 @@ export function Header({ user }: HeaderProps) {
                   <User className="mr-2 h-4 w-4" />
                   Perfil
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  // Forzar refetch de queries del dashboard
+                  if (window && window.__REACT_QUERY_CLIENT__) {
+                    window.__REACT_QUERY_CLIENT__.invalidateQueries()
+                  }
+                  // Alternativamente, recargar la página
+                  window.location.reload()
+                }}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Actualizar datos
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                   <LogOut className="mr-2 h-4 w-4" />
