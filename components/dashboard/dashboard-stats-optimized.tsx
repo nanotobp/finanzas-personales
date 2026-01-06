@@ -113,6 +113,11 @@ export const DashboardStats = memo(function DashboardStats({ userId }: Dashboard
       change: stats?.incomeChange || 0,
       lastMonth: formatCurrency((stats?.income || 0) * 0.95),
       color: 'emerald',
+      extra: (
+        <span className="block text-xs text-muted-foreground mt-1">
+          Incluye facturas cobradas
+        </span>
+      ),
     },
     {
       title: 'Gastos del Mes',

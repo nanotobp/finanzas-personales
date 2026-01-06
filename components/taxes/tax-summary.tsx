@@ -106,6 +106,9 @@ export function TaxSummary() {
 
   return (
     <div className="space-y-4">
+      <div className="mb-2 text-xs text-muted-foreground">
+        <strong>Nota:</strong> Todos los cálculos incluyen automáticamente todas las facturas emitidas este mes (impuestos incluidos).
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
