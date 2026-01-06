@@ -139,10 +139,15 @@ async function cacheFirst(request, cacheName) {
 async function staleWhileRevalidate(request, cacheName) {
   const cachedResponse = await caches.match(request);
   
-  const fetchPromise = fetch(request).then((networkResponse) => {
+  const fetchPromise = fetch(request).then(async (networkResponse) => {
     if (networkResponse && networkResponse.ok) {
-      const cache = caches.open(cacheName);
-      cache.then((c) => c.put(request, networkResponse.clone()));
+      try {
+        const cache = await caches.open(cacheName);
+        // Clone BEFORE using the response
+        await cache.put(request, networkResponse.clone());
+      } catch (error) {
+        console.log('[SW] Cache put failed:', error);
+      }
     }
     return networkResponse;
   }).catch((error) => {

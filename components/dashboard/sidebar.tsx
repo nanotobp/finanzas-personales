@@ -19,6 +19,7 @@ import {
   Settings,
   Receipt,
   PiggyBank,
+  Printer,
   Sparkles,
   LineChart,
   BarChart3,
@@ -28,6 +29,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Percent,
 } from 'lucide-react'
 import { useSidebarPreferences, colorGradients } from '@/hooks/use-sidebar-preferences'
 import { Button } from '@/components/ui/button'
@@ -41,6 +43,7 @@ interface NavigationSection {
   }[]
 }
 
+// Sidebar v2.1 - Con Impuestos y Análisis de Flujo unificado
 const navigationSections: NavigationSection[] = [
   {
     title: 'Principal',
@@ -53,8 +56,7 @@ const navigationSections: NavigationSection[] = [
     title: 'Analytics',
     items: [
       { name: 'Patrimonio Neto', href: '/net-worth', icon: LineChart },
-      { name: 'Flujo de Dinero', href: '/money-flow', icon: GitBranch },
-      { name: 'Cash Flow', href: '/cash-flow', icon: BarChart3 },
+      { name: 'Análisis de Flujo', href: '/flow', icon: GitBranch },
       { name: 'Actividad', href: '/activity', icon: Calendar },
       { name: 'Tasa de Ahorro', href: '/savings-rate', icon: Activity },
     ],
@@ -66,6 +68,7 @@ const navigationSections: NavigationSection[] = [
       { name: 'Ingresos', href: '/income', icon: TrendingUp },
       { name: 'Cuentas', href: '/accounts', icon: Wallet },
       { name: 'Tarjetas', href: '/cards', icon: CreditCard },
+      { name: 'Impuestos (IVA/IRP)', href: '/taxes', icon: Percent },
     ],
   },
   {
@@ -87,7 +90,7 @@ const navigationSections: NavigationSection[] = [
   {
     title: 'Sistema',
     items: [
-      { name: 'Reglas', href: '/rules', icon: Zap },
+      { name: 'Balance Financiero', href: '/rules', icon: Printer },
       { name: 'Reportes', href: '/reports', icon: FileText },
       { name: 'Configuración', href: '/settings', icon: Settings },
     ],

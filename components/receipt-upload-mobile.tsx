@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Camera, Upload, X, Check, Loader2 } from 'lucide-react'
+import { Camera, Upload, X, Check, Loader2, Image as ImageIcon, FileImage, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useCamera } from '@/hooks/use-camera'
@@ -186,7 +186,7 @@ export function ReceiptUploadMobile({
           <div className="max-w-2xl mx-auto">
             {selectedFile?.type === 'application/pdf' ? (
               <div className="bg-muted rounded-lg p-8 text-center">
-                <Upload className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
                 <p className="font-medium">{selectedFile.name}</p>
                 <p className="text-sm text-muted-foreground mt-2">
                   {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
@@ -229,7 +229,7 @@ export function ReceiptUploadMobile({
                 </>
               ) : (
                 <>
-                  <Upload className="mr-2 h-4 w-4" />
+                  <FileImage className="mr-2 h-4 w-4" />
                   Subir factura
                 </>
               )}

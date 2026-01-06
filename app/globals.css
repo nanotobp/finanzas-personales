@@ -99,3 +99,81 @@
     -moz-osx-font-smoothing: grayscale;
   }
 }
+
+/* Estilos para impresión de estados financieros */
+@media print {
+  @page {
+    size: A4;
+    margin: 2cm;
+  }
+
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Ocultar elementos innecesarios */
+  nav,
+  aside,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ajustar contenido principal */
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Asegurar que las tarjetas se vean bien */
+  .print\:shadow-none {
+    box-shadow: none !important;
+  }
+
+  .print\:border-b {
+    border-bottom: 2px solid #000 !important;
+  }
+
+  /* Mejorar tipografía para impresión */
+  body {
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+
+  h1 {
+    font-size: 18pt;
+    page-break-after: avoid;
+  }
+
+  h2, h3 {
+    font-size: 14pt;
+    page-break-after: avoid;
+  }
+
+  /* Evitar saltos de página innecesarios */
+  tr, img, table, figure {
+    page-break-inside: avoid;
+  }
+
+  /* Asegurar contraste en modo claro */
+  * {
+    color: black !important;
+    background: white !important;
+  }
+
+  /* Excepciones para elementos que necesitan color */
+  .text-green-600 {
+    color: #059669 !important;
+  }
+
+  .text-red-600 {
+    color: #dc2626 !important;
+  }
+
+  /* Bordes visibles */
+  [class*="border"] {
+    border-color: #ddd !important;
+  }
+}

@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tantml/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
-import { Users, UserCheck, DollarSign, Pencil, Trash2, LayoutGrid, Table } from 'lucide-react'
+import { Users, UserCheck, DollarSign, Pencil, Trash2, LayoutGrid, Table, AlertTriangle } from 'lucide-react'
 import { ClientFormDialog } from './client-form-dialog'
 import { useToast } from '@/hooks/use-toast'
 import {
@@ -18,12 +18,23 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 export function ClientsList() {
   const supabase = createClient()
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
+  const [clientToDelete, setClientToDelete] = useState<any>(null)
 
   const { data: clients, isLoading } = useQuery({
     queryKey: ['clients'],
@@ -38,8 +49,53 @@ export function ClientsList() {
     staleTime: 3 * 60 * 1000, // Cache por 3 minutos
   })
 
+  // Obtener o crear el cliente "Varios"
+  const getVariousClient = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Usuario no autenticado')
+
+    // Buscar cliente "Varios" existente
+    const { data: existing } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('name', 'Varios')
+      .single()
+
+    if (existing) return existing.id
+
+    // Si no existe, crearlo
+    const { data: newClient, error } = await supabase
+      .from('clients')
+      .insert({
+        user_id: user.id,
+        name: 'Varios',
+        type: 'occasional',
+        email: 'varios@sistema.local',
+        notes: 'Cliente por defecto para facturas sin cliente específico',
+        is_active: true,
+      })
+      .select('id')
+      .single()
+
+    if (error) throw error
+    return newClient.id
+  }
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Obtener o crear el cliente "Varios"
+      const variousClientId = await getVariousClient()
+
+      // Primero, transferir todas las facturas al cliente "Varios"
+      const { error: invoicesError } = await supabase
+        .from('invoices')
+        .update({ client_id: variousClientId })
+        .eq('client_id', id)
+
+      if (invoicesError) throw invoicesError
+
+      // Luego, eliminar el cliente
       const { error } = await supabase
         .from('clients')
         .delete()
@@ -49,9 +105,11 @@ export function ClientsList() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      setClientToDelete(null)
       toast({
         title: 'Cliente eliminado',
-        description: 'El cliente ha sido eliminado exitosamente.',
+        description: 'El cliente ha sido eliminado y sus facturas transferidas a "Varios".',
       })
     },
     onError: (error: any) => {
@@ -221,7 +279,8 @@ export function ClientsList() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => deleteMutation.mutate(client.id)}
+                          onClick={() => setClientToDelete(client)}
+                          disabled={client.name === 'Varios'}
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
@@ -313,8 +372,8 @@ export function ClientsList() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => deleteMutation.mutate(client.id)}
-                        disabled={deleteMutation.isPending}
+                        onClick={() => setClientToDelete(client)}
+                        disabled={deleteMutation.isPending || client.name === 'Varios'}
                         className="text-red-600 hover:text-red-700"
                       >
                         <Trash2 className="h-3 w-3 mr-1" />
@@ -335,6 +394,33 @@ export function ClientsList() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de confirmación para eliminar */}
+      <AlertDialog open={!!clientToDelete} onOpenChange={(open) => !open && setClientToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              ¿Eliminar este cliente?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Estás por eliminar a <strong>{clientToDelete?.name}</strong>.
+              {' '}Esta acción no se puede deshacer.
+              <br /><br />
+              Las facturas asociadas a este cliente se transferirán automáticamente al cliente "Varios" para mantener la integridad de tus registros.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => clientToDelete && deleteMutation.mutate(clientToDelete.id)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteMutation.isPending ? 'Eliminando...' : 'Sí, eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
