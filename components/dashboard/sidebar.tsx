@@ -21,6 +21,8 @@ import {
   PiggyBank,
   Printer,
   Sparkles,
+  FileCheck,
+  FilePlus,
   LineChart,
   BarChart3,
   GitBranch,
@@ -43,13 +45,15 @@ interface NavigationSection {
   }[]
 }
 
-// Sidebar v2.1 - Con Impuestos y Análisis de Flujo unificado
+// Sidebar v2.2 - Facturación en Principal
 const navigationSections: NavigationSection[] = [
   {
     title: 'Principal',
     items: [
       { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
       { name: 'Avanzado', href: '/advanced', icon: Sparkles },
+      { name: 'Generar factura', href: '/invoices/new', icon: FilePlus },
+      { name: 'Seguimiento de cobros', href: '/invoices', icon: FileCheck },
     ],
   },
   {
@@ -83,7 +87,6 @@ const navigationSections: NavigationSection[] = [
     title: 'Emprendedor',
     items: [
       { name: 'Clientes', href: '/clients', icon: Users },
-      { name: 'Cobros', href: '/invoices', icon: Receipt },
       { name: 'Proyectos', href: '/projects', icon: FolderKanban },
     ],
   },
