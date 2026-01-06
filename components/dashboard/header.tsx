@@ -59,108 +59,111 @@ export function Header({ user }: HeaderProps) {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
 
-  useEffect(() => {
-    const searchGlobal = async () => {
-      if (!searchQuery || searchQuery.length < 2) {
-        setSearchResults([])
-        return
-      }
-
-      setIsSearching(true)
-      const results: SearchResult[] = []
-
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        // Buscar en transacciones
-        const { data: transactions } = await supabase
-          .from('transactions')
-          .select('id, description, amount, type, date')
-          .eq('user_id', user.id)
-          .ilike('description', `%${searchQuery}%`)
-          .limit(5)
-
-        transactions?.forEach(t => {
-          results.push({
-            id: t.id,
-            type: 'transaction',
-            title: t.description,
-            subtitle: new Date(t.date).toLocaleDateString('es-PY'),
-            amount: t.amount,
-            icon: t.type === 'income' ? TrendingUp : TrendingDown,
-            href: '/activity'
-          })
-        })
-
-        // Buscar en cuentas
-        const { data: accounts } = await supabase
-          .from('accounts')
-          .select('id, name, balance, type')
-          .eq('user_id', user.id)
-          .ilike('name', `%${searchQuery}%`)
-          .limit(5)
-
-        accounts?.forEach(a => {
-          results.push({
-            id: a.id,
-            type: 'account',
-            title: a.name,
-            subtitle: `Saldo: ${formatCurrency(a.balance)}`,
-            icon: Wallet,
-            href: '/accounts'
-          })
-        })
-
-        // Buscar en tarjetas
-        const { data: cards } = await supabase
-          .from('cards')
-          .select('id, name, last_four, balance')
-          .eq('user_id', user.id)
-          .ilike('name', `%${searchQuery}%`)
-          .limit(5)
-
-        cards?.forEach(c => {
-          results.push({
-            id: c.id,
-            type: 'card',
-            title: c.name,
-            subtitle: `**** ${c.last_four}`,
-            icon: CreditCard,
-            href: '/cards'
-          })
-        })
-
-        // Buscar en clientes
-        const { data: clients } = await supabase
-          .from('clients')
-          .select('id, name, email, type')
-          .eq('user_id', user.id)
-          .ilike('name', `%${searchQuery}%`)
-          .limit(5)
-
-        clients?.forEach(c => {
-          results.push({
-            id: c.id,
-            type: 'client',
-            title: c.name,
-            subtitle: c.email || (c.type === 'fixed' ? 'Cliente Fijo' : 'Cliente Ocasional'),
-            icon: Users,
-            href: '/clients'
-          })
-        })
-
-        setSearchResults(results)
-      } catch (error) {
-        console.error('Error en búsqueda:', error)
-      } finally {
-        setIsSearching(false)
-      }
+  const searchGlobal = async () => {
+    if (!searchQuery || searchQuery.length < 2) {
+      setSearchResults([])
+      return
     }
 
-    const debounceTimer = setTimeout(searchGlobal, 300)
-    return () => clearTimeout(debounceTimer)
-  }, [searchQuery, supabase])
+    setIsSearching(true)
+    const results: SearchResult[] = []
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Buscar en transacciones
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('id, description, amount, type, date')
+        .eq('user_id', user.id)
+        .ilike('description', `%${searchQuery}%`)
+        .limit(5)
+
+      transactions?.forEach(t => {
+        results.push({
+          id: t.id,
+          type: 'transaction',
+          title: t.description,
+          subtitle: new Date(t.date).toLocaleDateString('es-PY'),
+          amount: t.amount,
+          icon: t.type === 'income' ? TrendingUp : TrendingDown,
+          href: '/activity'
+        })
+      })
+
+      // Buscar en cuentas
+      const { data: accounts } = await supabase
+        .from('accounts')
+        .select('id, name, balance, type')
+        .eq('user_id', user.id)
+        .ilike('name', `%${searchQuery}%`)
+        .limit(5)
+
+      accounts?.forEach(a => {
+        results.push({
+          id: a.id,
+          type: 'account',
+          title: a.name,
+          subtitle: `Saldo: ${formatCurrency(a.balance)}`,
+          icon: Wallet,
+          href: '/accounts'
+        })
+      })
+
+      // Buscar en tarjetas
+      const { data: cards } = await supabase
+        .from('cards')
+        .select('id, name, last_four, balance')
+        .eq('user_id', user.id)
+        .ilike('name', `%${searchQuery}%`)
+        .limit(5)
+
+      cards?.forEach(c => {
+        results.push({
+          id: c.id,
+          type: 'card',
+          title: c.name,
+          subtitle: `**** ${c.last_four}`,
+          icon: CreditCard,
+          href: '/cards'
+        })
+      })
+
+      // Buscar en clientes
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id, name, email, type')
+        .eq('user_id', user.id)
+        .ilike('name', `%${searchQuery}%`)
+        .limit(5)
+
+      clients?.forEach(c => {
+        results.push({
+          id: c.id,
+          type: 'client',
+          title: c.name,
+          subtitle: c.email || (c.type === 'fixed' ? 'Cliente Fijo' : 'Cliente Ocasional'),
+          icon: Users,
+          href: '/clients'
+        })
+      })
+
+      setSearchResults(results)
+    } catch (error) {
+      console.error('Error en búsqueda:', error)
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      searchGlobal()
+      setSearchOpen(true)
+    }
+  }
 
   const handleSelectResult = (result: SearchResult) => {
     router.push(result.href)
@@ -182,20 +185,17 @@ export function Header({ user }: HeaderProps) {
     )}>
       <div className="flex h-[88px] items-center px-4 sm:px-6 lg:px-8">
         <div className="flex flex-1 items-center justify-between gap-4">
-          {/* Search Bar - Búsqueda Global con ILIKE */}
+          {/* Search Bar - Búsqueda con Enter */}
           <Popover open={searchOpen} onOpenChange={setSearchOpen}>
             <PopoverTrigger asChild>
               <div className="flex-1 max-w-md relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary z-10" />
                 <Input
                   type="search"
-                  placeholder="Buscar transacciones, cuentas..."
+                  placeholder="Buscar transacciones, cuentas... (Enter para buscar)"
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value)
-                    setSearchOpen(true)
-                  }}
-                  onFocus={() => setSearchOpen(true)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
                   className="w-full pl-9 pr-4 bg-card border-0 shadow-sm rounded-full h-11 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-primary"
                 />
               </div>
