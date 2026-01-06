@@ -13,7 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "db:migrate": "node scripts/migrate.js",
     "db:rollback": "node scripts/rollback.js",
-    "db:status": "node scripts/migration-status.js"
+    "db:status": "node scripts/migration-status.js",
+    "fix:invoices": "bash scripts/show-fix-instructions.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
