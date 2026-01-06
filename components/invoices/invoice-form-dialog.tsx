@@ -70,7 +70,7 @@ export function InvoiceFormDialog({ invoice, trigger }: InvoiceFormDialogProps) 
       client_id: invoice?.client_id || '',
       invoice_number: invoice?.invoice_number || '',
       issue_date: invoice?.issue_date || new Date().toISOString().split('T')[0],
-      due_date: invoice?.due_date || '',
+      due_date: invoice?.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       amount: invoice?.amount?.toString() || '',
       payment_method: invoice?.payment_method || 'bank_transfer',
       status: invoice?.status || 'pending',
@@ -108,11 +108,19 @@ export function InvoiceFormDialog({ invoice, trigger }: InvoiceFormDialogProps) 
 
   const mutation = useMutation({
     mutationFn: async (data: InvoiceFormData) => {
+      // Obtener el user_id actual
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Usuario no autenticado')
+
       const invoiceData = {
         ...data,
+        user_id: user.id,
         amount: parseFloat(data.amount),
+        // Si due_date está vacío, usar issue_date + 30 días
+        due_date: data.due_date || new Date(new Date(data.issue_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         paid_date: data.paid_date || null,
         destination_category_id: data.destination_category_id || null,
+        notes: data.notes || null,
       }
 
       if (invoice) {
