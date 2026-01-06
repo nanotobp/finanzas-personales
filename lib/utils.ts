@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatCurrency(amount: number, currency = 'PYG') {
   if (currency === 'PYG') {
-    return `₲ ${amount.toLocaleString('es-PY')}`
+    return `Gs. ${Math.round(amount).toLocaleString('es-PY')}`
   }
   return new Intl.NumberFormat('es-PY', {
     style: 'currency',

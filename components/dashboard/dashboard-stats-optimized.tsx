@@ -41,7 +41,7 @@ export const DashboardStats = memo(function DashboardStats({ userId }: Dashboard
         .toISOString().split('T')[0]
 
       // Optimización: Una sola query con todos los datos
-      const [transactionsResult, accountsResult] = await Promise.all([
+      const [transactionsResult, accountsResult, invoicesResult] = await Promise.all([
         supabase
           .from('transactions')
           .select('amount, type')
@@ -50,11 +50,18 @@ export const DashboardStats = memo(function DashboardStats({ userId }: Dashboard
         supabase
           .from('accounts')
           .select('balance')
-          .eq('is_active', true)
+          .eq('is_active', true),
+        supabase
+          .from('invoices')
+          .select('amount, status, issue_date')
+          .gte('issue_date', startDate)
+          .lte('issue_date', endDate)
+          .eq('status', 'paid')
       ])
 
       const transactions = transactionsResult.data || []
       const accounts = accountsResult.data || []
+      const paidInvoices = invoicesResult.data || []
 
       // Calcular en una sola pasada
       const { totalIncome, totalExpenses } = transactions.reduce(
@@ -70,14 +77,18 @@ export const DashboardStats = memo(function DashboardStats({ userId }: Dashboard
         { totalIncome: 0, totalExpenses: 0 }
       )
 
+      // Sumar ingresos de facturas cobradas
+      const invoiceIncome = paidInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0)
+      const finalIncome = totalIncome + invoiceIncome
+
       const totalBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
 
       // Calculate percentage changes (mock data for demo)
       return {
-        income: totalIncome,
+        income: finalIncome,
         expenses: totalExpenses,
         balance: totalBalance,
-        net: totalIncome - totalExpenses,
+        net: finalIncome - totalExpenses,
         balanceChange: 3.12,
         incomeChange: 2.84,
         expensesChange: -4.78,

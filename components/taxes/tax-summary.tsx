@@ -21,31 +21,66 @@ export function TaxSummary() {
       const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
         .toISOString().slice(0, 10)
 
-      // Obtener transacciones del mes
-      const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('date', startDate)
-        .lte('date', endDate)
+      // Obtener transacciones e invoices del mes
+      const [transactionsResult, invoicesResult, settingsResult] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('date', startDate)
+          .lte('date', endDate),
+        supabase
+          .from('invoices')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('issue_date', startDate)
+          .lte('issue_date', endDate),
+        supabase
+          .from('tax_settings')
+          .select('*')
+          .eq('user_id', user.id)
+          .single()
+      ])
 
-      if (error) throw error
+      if (transactionsResult.error) throw transactionsResult.error
+      const transactions = transactionsResult.data || []
+      const invoices = invoicesResult.data || []
+      const settings = settingsResult.data
 
-      // Calcular totales
-      const ivaVentas = transactions
+      // Calcular IVA e IRP por defecto (10% y 3% respectivamente)
+      const defaultIvaRate = settings?.default_iva_percentage || 10
+      const defaultIrpRate = settings?.default_irp_percentage || 3
+
+      // Calcular IVA de facturas (todas tienen impuestos incluidos)
+      const invoiceIva = invoices.reduce((sum, inv) => {
+        const amount = Number(inv.amount)
+        // IVA incluido: monto / 1.10 * 0.10
+        return sum + (amount / (1 + defaultIvaRate/100) * (defaultIvaRate/100))
+      }, 0)
+
+      const invoiceIrp = invoices.reduce((sum, inv) => {
+        const amount = Number(inv.amount)
+        // IRP sobre el monto bruto
+        return sum + (amount * (defaultIrpRate/100))
+      }, 0)
+
+      const invoiceIncome = invoices.reduce((sum, inv) => sum + Number(inv.amount), 0)
+
+      // Calcular totales de transacciones
+      const ivaVentas = (transactions
         ?.filter(t => t.type === 'income')
-        ?.reduce((sum, t) => sum + (Number(t.iva_amount) || 0), 0) || 0
+        ?.reduce((sum, t) => sum + (Number(t.iva_amount) || 0), 0) || 0) + invoiceIva
 
       const ivaCompras = transactions
         ?.filter(t => t.type === 'expense')
         ?.reduce((sum, t) => sum + (Number(t.iva_amount) || 0), 0) || 0
 
-      const irpTotal = transactions
-        ?.reduce((sum, t) => sum + (Number(t.irp_amount) || 0), 0) || 0
+      const irpTotal = (transactions
+        ?.reduce((sum, t) => sum + (Number(t.irp_amount) || 0), 0) || 0) + invoiceIrp
 
-      const ingresosTotales = transactions
+      const ingresosTotales = (transactions
         ?.filter(t => t.type === 'income')
-        ?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
+        ?.reduce((sum, t) => sum + Number(t.amount), 0) || 0) + invoiceIncome
 
       const gastosTotales = transactions
         ?.filter(t => t.type === 'expense')

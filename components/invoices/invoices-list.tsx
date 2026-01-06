@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, lazy, Suspense } from 'react'
+import { useMemo, lazy, Suspense, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,6 +12,8 @@ import { InvoiceFormDialog } from './invoice-form-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { format, differenceInDays } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const ReactECharts = lazy(() => import('echarts-for-react'))
 
@@ -19,8 +21,10 @@ export function InvoicesList() {
   const supabase = createClient()
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [monthFilter, setMonthFilter] = useState<string>(new Date().toISOString().slice(0, 7))
 
-  const { data: invoices, isLoading } = useQuery({
+  const { data: allInvoices, isLoading } = useQuery({
     queryKey: ['invoices'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -37,6 +41,35 @@ export function InvoicesList() {
     },
     staleTime: 2 * 60 * 1000, // Cache por 2 minutos
   })
+
+  // Filtrar facturas por estado y mes
+  const invoices = useMemo(() => {
+    if (!allInvoices) return []
+    
+    return allInvoices.filter(inv => {
+      // Filtro por estado
+      if (statusFilter !== 'all' && inv.status !== statusFilter) {
+        return false
+      }
+      
+      // Filtro por mes (basado en issue_date)
+      if (monthFilter !== 'all') {
+        const invMonth = inv.issue_date.slice(0, 7)
+        if (invMonth !== monthFilter) {
+          return false
+        }
+      }
+      
+      return true
+    })
+  }, [allInvoices, statusFilter, monthFilter])
+
+  // Generar lista de meses disponibles
+  const availableMonths = useMemo(() => {
+    if (!allInvoices) return []
+    const months = new Set(allInvoices.map(inv => inv.issue_date.slice(0, 7)))
+    return Array.from(months).sort().reverse()
+  }, [allInvoices])
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -223,6 +256,36 @@ export function InvoicesList() {
 
   return (
     <div className="space-y-6">
+      {/* Filtros */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full sm:w-auto">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="all">Todas</TabsTrigger>
+            <TabsTrigger value="pending">Pendientes</TabsTrigger>
+            <TabsTrigger value="paid">Cobradas</TabsTrigger>
+            <TabsTrigger value="overdue">Vencidas</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        <Select value={monthFilter} onValueChange={setMonthFilter}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="Seleccionar mes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los meses</SelectItem>
+            {availableMonths.map(month => {
+              const [year, monthNum] = month.split('-')
+              const monthName = format(new Date(parseInt(year), parseInt(monthNum) - 1), 'MMMM yyyy', { locale: es })
+              return (
+                <SelectItem key={month} value={month}>
+                  {monthName.charAt(0).toUpperCase() + monthName.slice(1)}
+                </SelectItem>
+              )
+            })}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
