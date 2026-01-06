@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Limpiar Service Worker</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #22c55e;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #16a34a;
+    }
+    .danger {
+      background: #ef4444;
+    }
+    .danger:hover {
+      background: #dc2626;
+    }
+    .success {
+      color: #22c55e;
+      margin-top: 15px;
+    }
+    .error {
+      color: #ef4444;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔧 Limpiar Service Worker</h1>
+    <p>Usa esta página si tienes problemas con el caché del Service Worker.</p>
+    
+    <button onclick="clearCache()">Limpiar Caché</button>
+    <button onclick="unregisterSW()" class="danger">Desregistrar Service Worker</button>
+    <button onclick="reloadPage()">Recargar Página</button>
+    
+    <div id="status"></div>
+  </div>
+
+  <script>
+    async function clearCache() {
+      const status = document.getElementById('status');
+      try {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+        status.innerHTML = '<p class="success">✅ Caché limpiado exitosamente!</p>';
+      } catch (error) {
+        status.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+
+    async function unregisterSW() {
+      const status = document.getElementById('status');
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (let registration of registrations) {
+          await registration.unregister();
+        }
+        status.innerHTML = '<p class="success">✅ Service Worker desregistrado! Recarga la página.</p>';
+      } catch (error) {
+        status.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+
+    function reloadPage() {
+      window.location.href = '/';
+    }
+  </script>
+</body>
+</html>

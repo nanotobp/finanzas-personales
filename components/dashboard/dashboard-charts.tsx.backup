@@ -1,0 +1,188 @@
+'use client'
+
+import { lazy, Suspense } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+const ReactECharts = lazy(() => import('echarts-for-react'))
+
+interface DashboardChartsProps {
+  userId: string
+}
+
+export function DashboardCharts({ userId }: DashboardChartsProps) {
+  const supabase = createClient()
+  const currentMonth = new Date().toISOString().slice(0, 7)
+
+  const { data: expensesByCategory } = useQuery({
+    queryKey: ['expenses-by-category', currentMonth],
+    queryFn: async () => {
+      const startDate = `${currentMonth}-01`
+      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
+        .toISOString().split('T')[0]
+
+      const { data } = await supabase
+        .from('transactions')
+        .select('amount, categories(name, color)')
+        .eq('type', 'expense')
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .not('category_id', 'is', null)
+
+      const grouped = data?.reduce((acc: any, t: any) => {
+        const categoryName = t.categories?.name || 'Sin categoría'
+        if (!acc[categoryName]) {
+          acc[categoryName] = {
+            name: categoryName,
+            value: 0,
+            itemStyle: { color: t.categories?.color || '#64748b' }
+          }
+        }
+        acc[categoryName].value += Number(t.amount)
+        return acc
+      }, {})
+
+      return Object.values(grouped || {})
+    },
+    staleTime: 3 * 60 * 1000, // Cache por 3 minutos
+  })
+
+  const { data: monthlyTrend } = useQuery({
+    queryKey: ['monthly-trend'],
+    queryFn: async () => {
+      const months = []
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date()
+        date.setMonth(date.getMonth() - i)
+        months.push(date.toISOString().slice(0, 7))
+      }
+
+      const results = await Promise.all(
+        months.map(async (month) => {
+          const startDate = `${month}-01`
+          const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
+            .toISOString().split('T')[0]
+
+          const { data: income } = await supabase
+            .from('transactions')
+            .select('amount')
+            .eq('type', 'income')
+            .gte('date', startDate)
+            .lte('date', endDate)
+
+          const { data: expenses } = await supabase
+            .from('transactions')
+            .select('amount')
+            .eq('type', 'expense')
+            .gte('date', startDate)
+            .lte('date', endDate)
+
+          return {
+            month,
+            income: income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0,
+            expenses: expenses?.reduce((sum, t) => sum + Number(t.amount), 0) || 0,
+          }
+        })
+      )
+
+      return results
+    },
+    staleTime: 3 * 60 * 1000, // Cache por 3 minutos
+  })
+
+  const pieOption = {
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: ₲ {c} ({d}%)'
+    },
+    legend: {
+      bottom: 0,
+      left: 'center',
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: ['40%', '70%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 10,
+          borderColor: '#fff',
+          borderWidth: 2
+        },
+        label: {
+          show: false,
+        },
+        emphasis: {
+          label: {
+            show: true,
+            fontSize: 14,
+            fontWeight: 'bold'
+          }
+        },
+        data: expensesByCategory || []
+      }
+    ]
+  }
+
+  const lineOption = {
+    tooltip: {
+      trigger: 'axis'
+    },
+    legend: {
+      data: ['Ingresos', 'Gastos']
+    },
+    xAxis: {
+      type: 'category',
+      data: monthlyTrend?.map(m => {
+        const date = new Date(m.month + '-01')
+        return date.toLocaleDateString('es-PY', { month: 'short' })
+      }) || []
+    },
+    yAxis: {
+      type: 'value'
+    },
+    series: [
+      {
+        name: 'Ingresos',
+        type: 'line',
+        data: monthlyTrend?.map(m => m.income) || [],
+        smooth: true,
+        itemStyle: { color: '#10b981' }
+      },
+      {
+        name: 'Gastos',
+        type: 'line',
+        data: monthlyTrend?.map(m => m.expenses) || [],
+        smooth: true,
+        itemStyle: { color: '#ef4444' }
+      }
+    ]
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Gastos por Categoría</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Suspense fallback={<div className="h-[300px] flex items-center justify-center">Cargando gráfico...</div>}>
+            <ReactECharts option={pieOption} style={{ height: '300px' }} lazyUpdate={true} />
+          </Suspense>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tendencia Últimos 6 Meses</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Suspense fallback={<div className="h-[300px] flex items-center justify-center">Cargando gráfico...</div>}>
+            <ReactECharts option={lineOption} style={{ height: '300px' }} lazyUpdate={true} />
+          </Suspense>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

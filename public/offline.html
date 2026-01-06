@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sin conexión - Finanzas Personales</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      padding: 20px;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 500px;
+    }
+
+    .icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      opacity: 0.9;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    p {
+      font-size: 18px;
+      opacity: 0.9;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+
+    .button {
+      display: inline-block;
+      background: white;
+      color: #667eea;
+      padding: 12px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: transform 0.2s;
+    }
+
+    .button:hover {
+      transform: scale(1.05);
+    }
+
+    .features {
+      margin-top: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .features h2 {
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
+    .features ul {
+      list-style: none;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .features li {
+      margin: 8px 0;
+    }
+
+    .features li:before {
+      content: "✓ ";
+      font-weight: bold;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">📡</div>
+    <h1>Sin conexión a Internet</h1>
+    <p>No te preocupes, podés seguir usando algunas funciones de Finanzas Personales mientras estás offline.</p>
+
+    <a href="/" class="button" onclick="window.location.reload(); return false;">
+      Intentar de nuevo
+    </a>
+
+    <div class="features">
+      <h2>Funciones disponibles offline:</h2>
+      <ul>
+        <li>Ver gastos e ingresos cargados</li>
+        <li>Tomar fotos de facturas (se subirán cuando vuelvas online)</li>
+        <li>Consultar presupuestos</li>
+        <li>Ver reportes guardados</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // Verificar conexión cada 5 segundos
+    setInterval(() => {
+      if (navigator.onLine) {
+        window.location.href = '/dashboard';
+      }
+    }, 5000);
+  </script>
+</body>
+</html>

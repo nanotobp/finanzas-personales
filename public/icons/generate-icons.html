@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generador de Iconos PWA</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    canvas { border: 1px solid #ccc; margin: 10px; }
+    button { padding: 10px 20px; font-size: 16px; margin: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Generador de Iconos para PWA</h1>
+  <p>Estos iconos se generarán automáticamente con el logo de la app</p>
+
+  <div id="canvases"></div>
+
+  <button onclick="generateIcons()">Generar Iconos</button>
+  <button onclick="downloadAll()">Descargar Todos</button>
+
+  <script>
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    const downloads = [];
+
+    function generateIcon(size) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Fondo con gradiente verde
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#22c55e');
+      gradient.addColorStop(1, '#16a34a');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+
+      // Círculo blanco interno
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size/3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Símbolo de $ (dinero)
+      ctx.fillStyle = 'white';
+      ctx.font = `bold ${size/2}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('$', size/2, size/2);
+
+      return canvas;
+    }
+
+    function generateIcons() {
+      const container = document.getElementById('canvases');
+      container.innerHTML = '';
+      downloads.length = 0;
+
+      sizes.forEach(size => {
+        const canvas = generateIcon(size);
+        container.appendChild(canvas);
+
+        const label = document.createElement('div');
+        label.textContent = `${size}x${size}`;
+        container.appendChild(label);
+
+        canvas.toBlob(blob => {
+          downloads.push({
+            blob,
+            name: `icon-${size}x${size}.png`
+          });
+        });
+      });
+    }
+
+    function downloadAll() {
+      downloads.forEach(({ blob, name }) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    // Generar automáticamente al cargar
+    generateIcons();
+  </script>
+</body>
+</html>

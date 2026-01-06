@@ -1,0 +1,79 @@
+'use client'
+
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatCurrency, formatShortDate } from '@/lib/utils'
+import { ArrowUpCircle, ArrowDownCircle } from 'lucide-react'
+
+interface RecentTransactionsProps {
+  userId: string
+}
+
+export function RecentTransactions({ userId }: RecentTransactionsProps) {
+  const supabase = createClient()
+
+  const { data: transactions } = useQuery({
+    queryKey: ['recent-transactions'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('transactions')
+        .select('*, categories(name, icon, color)')
+        .order('date', { ascending: false })
+        .limit(10)
+
+      return data || []
+    },
+  })
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Transacciones Recientes</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {transactions?.map((transaction) => (
+            <div
+              key={transaction.id}
+              className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50"
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={`p-2 rounded-lg ${
+                    transaction.type === 'income' ? 'bg-green-50' : 'bg-red-50'
+                  }`}
+                >
+                  {transaction.type === 'income' ? (
+                    <ArrowUpCircle className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <ArrowDownCircle className="h-4 w-4 text-red-600" />
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium text-sm">{transaction.description}</p>
+                  <p className="text-xs text-gray-500">
+                    {transaction.categories?.icon} {transaction.categories?.name || 'Sin categoría'} • {formatShortDate(transaction.date)}
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`font-semibold ${
+                  transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                }`}
+              >
+                {transaction.type === 'income' ? '+' : '-'}
+                {formatCurrency(transaction.amount)}
+              </div>
+            </div>
+          ))}
+          {(!transactions || transactions.length === 0) && (
+            <p className="text-center text-gray-500 py-8">
+              No hay transacciones recientes
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}

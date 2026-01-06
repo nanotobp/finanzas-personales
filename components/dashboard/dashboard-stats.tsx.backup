@@ -1,0 +1,142 @@
+'use client'
+
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { Card } from '@/components/ui/card'
+import { formatCurrency } from '@/lib/utils'
+import { ArrowUpIcon, ArrowDownIcon, Wallet, TrendingUp } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+interface DashboardStatsProps {
+  userId: string
+}
+
+export function DashboardStats({ userId }: DashboardStatsProps) {
+  const supabase = createClient()
+  const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
+
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats', currentMonth],
+    queryFn: async () => {
+      const startDate = `${currentMonth}-01`
+      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
+        .toISOString().split('T')[0]
+
+      // Get income
+      const { data: income } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('type', 'income')
+        .gte('date', startDate)
+        .lte('date', endDate)
+
+      // Get expenses
+      const { data: expenses } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('type', 'expense')
+        .gte('date', startDate)
+        .lte('date', endDate)
+
+      // Get total balance from accounts
+      const { data: accounts } = await supabase
+        .from('accounts')
+        .select('balance')
+        .eq('is_active', true)
+
+      const totalIncome = income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
+      const totalExpenses = expenses?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
+      const totalBalance = accounts?.reduce((sum, a) => sum + Number(a.balance), 0) || 0
+
+      // Calculate percentage changes (mock data for demo)
+      return {
+        income: totalIncome,
+        expenses: totalExpenses,
+        balance: totalBalance,
+        net: totalIncome - totalExpenses,
+        balanceChange: 3.12,
+        incomeChange: 2.84,
+        expensesChange: -4.78,
+        netChange: 1.98,
+      }
+    },
+    staleTime: 3 * 60 * 1000, // Cache por 3 minutos
+  })
+
+  const statCards = useMemo(() => [
+    {
+      title: 'Saldo Total',
+      value: stats?.balance || 0,
+      change: stats?.balanceChange || 0,
+      lastMonth: formatCurrency((stats?.balance || 0) * 0.93),
+      color: 'emerald',
+    },
+    {
+      title: 'Ingresos del Mes',
+      value: stats?.income || 0,
+      change: stats?.incomeChange || 0,
+      lastMonth: formatCurrency((stats?.income || 0) * 0.95),
+      color: 'emerald',
+    },
+    {
+      title: 'Gastos del Mes',
+      value: stats?.expenses || 0,
+      change: stats?.expensesChange || 0,
+      lastMonth: formatCurrency((stats?.expenses || 0) * 1.05),
+      color: 'red',
+    },
+    {
+      title: 'Balance Neto',
+      value: stats?.net || 0,
+      change: stats?.netChange || 0,
+      lastMonth: formatCurrency((stats?.net || 0) * 0.98),
+      color: (stats?.net || 0) >= 0 ? 'emerald' : 'red',
+    },
+  ], [stats])
+
+  return (
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2">
+      {statCards.map((stat) => {
+        const isPositive = stat.change > 0
+        return (
+          <Card key={stat.title} className="p-6 h-[180px] flex flex-col">
+            <div className="flex flex-col h-full">
+              <div className="space-y-2 mb-auto">
+                <h3 className="text-sm font-medium text-muted-foreground">{stat.title}</h3>
+                <div className="text-3xl font-bold">{formatCurrency(stat.value)}</div>
+                <div className="flex items-center gap-2 text-sm">
+                  <div className={cn(
+                    'flex items-center gap-1',
+                    isPositive ? 'text-emerald-600' : 'text-red-600'
+                  )}>
+                    {isPositive ? (
+                      <ArrowUpIcon className="h-4 w-4" />
+                    ) : (
+                      <ArrowDownIcon className="h-4 w-4" />
+                    )}
+                    <span className="font-medium">{Math.abs(stat.change)}%</span>
+                  </div>
+                  <span className="text-muted-foreground">Mes anterior {stat.lastMonth}</span>
+                </div>
+              </div>
+              {/* Mini chart placeholder - se puede agregar un BarChart aquí */}
+              <div className="h-16 mt-2 flex items-end gap-1">
+                {[40, 60, 45, 70, 85, 75, 90, 100, 80, 65, 75, 85].map((height, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(
+                      'flex-1 rounded-sm transition-all hover:opacity-80',
+                      isPositive ? 'bg-emerald-600/80' : 'bg-red-600/80'
+                    )}
+                    style={{ height: `${height}%` }}
+                  />
+                ))}
+              </div>
+            </div>
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
