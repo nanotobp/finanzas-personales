@@ -78,7 +78,7 @@ export const DashboardStats = memo(function DashboardStats({ userId }: Dashboard
       )
 
       // Sumar ingresos de facturas cobradas
-      const invoiceIncome = paidInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0)
+      const invoiceIncome = paidInvoices.reduce((sum, inv) => sum + (typeof inv.amount === 'string' ? parseFloat(inv.amount) : Number(inv.amount)), 0)
       const finalIncome = totalIncome + invoiceIncome
 
       const totalBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
