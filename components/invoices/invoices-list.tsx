@@ -295,9 +295,8 @@ export function InvoicesList() {
 
       {/* Invoices List */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader>
           <CardTitle>Facturas</CardTitle>
-          <InvoiceFormDialog />
         </CardHeader>
         <CardContent>
           {isLoading ? (
