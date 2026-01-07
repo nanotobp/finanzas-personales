@@ -68,8 +68,10 @@ export default async function DashboardPage() {
   // Obtener stats del dashboard en el server
   const currentMonth = new Date().toISOString().slice(0, 7)
   const startDate = `${currentMonth}-01`
-  const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-    .toISOString().split('T')[0]
+  const year = parseInt(currentMonth.split('-')[0])
+  const month = parseInt(currentMonth.split('-')[1])
+  const lastDay = new Date(year, month, 0).getDate()
+  const endDate = `${currentMonth}-${String(lastDay).padStart(2, '0')}`
 
   console.log('Date Range:', { startDate, endDate })
 
