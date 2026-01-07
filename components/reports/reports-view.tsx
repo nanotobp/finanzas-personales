@@ -23,9 +23,14 @@ export function ReportsView() {
   const [viewMode, setViewMode] = useState<'year' | 'month'>('year')
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
 
-  const { data: yearlyData } = useQuery({
+  const { data: yearlyData, isLoading, error } = useQuery({
     queryKey: ['yearly-report', selectedYear],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Usuario no autenticado')
+      
+      console.log('👤 User ID:', user.id)
+      
       const months = []
       for (let i = 0; i < 12; i++) {
         const date = new Date(selectedYear, i, 1)
@@ -38,6 +43,8 @@ export function ReportsView() {
           const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
             .toISOString().split('T')[0]
 
+          console.log(`🗓️ Consultando mes ${month}: ${startDate} a ${endDate}`)
+
           // Ingresos directos
           const { data: income } = await supabase
             .from('transactions')
@@ -49,7 +56,7 @@ export function ReportsView() {
           // Facturas cobradas
           const { data: invoices, error: invoicesError } = await supabase
             .from('invoices')
-            .select('amount, paid_date')
+            .select('amount, paid_date, status, user_id, invoice_number')
             .eq('status', 'paid')
             .not('paid_date', 'is', null)
             .gte('paid_date', startDate)
@@ -57,8 +64,9 @@ export function ReportsView() {
 
           // Debug: mostrar facturas encontradas
           if (month === new Date().toISOString().slice(0, 7)) {
-            console.log(`📊 Facturas en ${month}:`, invoices?.length || 0, invoices)
-            if (invoicesError) console.error('Error facturas:', invoicesError)
+            console.log(`📊 Facturas encontradas en ${month}:`, invoices?.length || 0)
+            console.log('Facturas:', invoices)
+            if (invoicesError) console.error('❌ Error facturas:', invoicesError)
           }
 
           // Gastos
@@ -249,15 +257,24 @@ export function ReportsView() {
       </div>
 
       {/* DEBUG: Mostrar datos del mes actual */}
+      {isLoading && <div className="mb-4 text-xs bg-gray-50 p-4 rounded-lg">Cargando datos...</div>}
+      {error && (
+        <div className="mb-4 text-xs bg-red-50 p-4 rounded-lg border border-red-200">
+          <strong>❌ Error:</strong> {(error as Error).message}
+        </div>
+      )}
       {yearlyData && (() => {
         const currentMonthData = yearlyData.find(m => m.month === new Date().toISOString().slice(0, 7))
         if (currentMonthData) {
           return (
-            <div className="mb-4 text-xs bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <div className="mb-4 text-xs bg-yellow-50 p-4 rounded-lg border border-yellow-200 space-y-1">
               <strong>🔍 Debug - Mes actual ({currentMonthData.month}):</strong><br/>
               Ingresos: Gs. {currentMonthData.income.toLocaleString('es-PY')}<br/>
               Gastos: Gs. {currentMonthData.expenses.toLocaleString('es-PY')}<br/>
-              Beneficio: Gs. {currentMonthData.profit.toLocaleString('es-PY')}
+              Beneficio: Gs. {currentMonthData.profit.toLocaleString('es-PY')}<br/>
+              <div className="mt-2 pt-2 border-t border-yellow-300">
+                <strong>Abre la consola del navegador (F12) para ver más detalles de debug</strong>
+              </div>
             </div>
           )
         }
