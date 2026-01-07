@@ -37,11 +37,16 @@ export function BudgetsList() {
       const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
         .toISOString().split('T')[0]
 
-      // Get budgets with categories
+      // Get budgets with categories (active ones: no end_date OR end_date >= current month)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return []
+
       const { data: budgets } = await supabase
         .from('budgets')
         .select('*, categories(name, icon, color)')
+        .eq('user_id', user.id)
         .eq('month', currentMonth)
+        .or(`end_date.is.null,end_date.gte.${currentMonth}`)
         .order('amount', { ascending: false })
 
       // Get expenses for each category
@@ -50,6 +55,7 @@ export function BudgetsList() {
           const { data: expenses } = await supabase
             .from('transactions')
             .select('amount')
+            .eq('user_id', user.id)
             .eq('type', 'expense')
             .eq('category_id', budget.category_id)
             .gte('date', startDate)
@@ -124,6 +130,11 @@ export function BudgetsList() {
                       <p className="text-sm text-gray-500">
                         {formatCurrency(budget.spent)} de {formatCurrency(budget.amount)}
                       </p>
+                      {budget.end_date && (
+                        <p className="text-xs text-orange-600">
+                          Válido hasta: {new Date(budget.end_date + '-01').toLocaleDateString('es-PY', { month: 'long', year: 'numeric' })}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">

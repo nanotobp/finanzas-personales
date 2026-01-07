@@ -30,6 +30,7 @@ const expenseSchema = z.object({
   category_id: z.string().min(1, 'La categoría es requerida'),
   account_id: z.string().min(1, 'La cuenta es requerida'),
   date: z.string().min(1, 'La fecha es requerida'),
+  project_id: z.string().optional(),
   notes: z.string().optional(),
 })
 
@@ -81,6 +82,24 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
     },
   })
 
+  const { data: projects = [] } = useQuery({
+    queryKey: ['projects-active'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No user')
+      
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('name')
+      
+      if (error) throw error
+      return data
+    },
+  })
+
   const {
     register,
     handleSubmit,
@@ -96,9 +115,11 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
       category_id: expense.category_id,
       account_id: expense.account_id,
       date: expense.date,
+      project_id: expense.project_id || '',
       notes: expense.notes || '',
     } : {
       date: new Date().toISOString().split('T')[0],
+      project_id: '',
     },
   })
 
@@ -115,6 +136,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
         category_id: data.category_id,
         account_id: data.account_id,
         date: data.date,
+        project_id: data.project_id || null,
         notes: data.notes || null,
       })
 
@@ -124,6 +146,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
       reset()
       onOpenChange(false)
     },
@@ -139,6 +162,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
           category_id: data.category_id,
           account_id: data.account_id,
           date: data.date,
+          project_id: data.project_id || null,
           notes: data.notes || null,
         })
         .eq('id', expense.id)
@@ -149,6 +173,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
       reset()
       onOpenChange(false)
     },
@@ -243,6 +268,32 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
             {errors.account_id && (
               <p className="text-sm text-red-500">{errors.account_id.message}</p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="project_id">Proyecto (opcional)</Label>
+            <Select
+              value={watch('project_id') || 'none'}
+              onValueChange={(value) => setValue('project_id', value === 'none' ? '' : value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sin proyecto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin proyecto</SelectItem>
+                {projects.map((proj: any) => (
+                  <SelectItem key={proj.id} value={proj.id}>
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: proj.color }}
+                      />
+                      {proj.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

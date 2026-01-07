@@ -17,11 +17,12 @@ export function BudgetsSummary() {
       const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
         .toISOString().split('T')[0]
 
-      // Get budgets for current month
+      // Get budgets for current month (active ones: no end_date OR end_date >= current month)
       const { data: budgets } = await supabase
         .from('budgets')
         .select('*, categories(id)')
         .eq('month', currentMonth)
+        .or(`end_date.is.null,end_date.gte.${currentMonth}`)
 
       // Get expenses by category for current month
       const { data: expenses } = await supabase

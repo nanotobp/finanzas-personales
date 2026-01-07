@@ -10,6 +10,7 @@ import { IncomeExpensesChart } from '@/components/dashboard/income-expenses-char
 import { WeeklyExpenses } from '@/components/dashboard/weekly-expenses'
 import { MonthlyBudgetsCard } from '@/components/dashboard/monthly-budgets-card'
 import { FinancialRecommendations } from '@/components/dashboard/financial-recommendations'
+import { IVAPayableCard } from '@/components/dashboard/iva-payable-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
 
@@ -191,9 +192,14 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Weekly Expenses - full width */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1">
-        <WeeklyExpenses />
+      {/* Weekly Expenses and IVA - 2 columns */}
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <WeeklyExpenses />
+        </div>
+        <div className="lg:col-span-1">
+          <IVAPayableCard />
+        </div>
       </div>
     </div>
   )

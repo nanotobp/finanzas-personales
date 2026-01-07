@@ -30,6 +30,7 @@ const incomeSchema = z.object({
   category_id: z.string().min(1, 'La categoría es requerida'),
   account_id: z.string().min(1, 'La cuenta es requerida'),
   client_id: z.string().optional(),
+  project_id: z.string().optional(),
   date: z.string().min(1, 'La fecha es requerida'),
   notes: z.string().optional(),
 })
@@ -100,6 +101,24 @@ export function IncomeFormDialog({ open, onOpenChange, income }: IncomeFormDialo
     },
   })
 
+  const { data: projects = [] } = useQuery({
+    queryKey: ['projects-active'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No user')
+      
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('name')
+      
+      if (error) throw error
+      return data
+    },
+  })
+
   const {
     register,
     handleSubmit,
@@ -115,10 +134,13 @@ export function IncomeFormDialog({ open, onOpenChange, income }: IncomeFormDialo
       category_id: income.category_id,
       account_id: income.account_id,
       client_id: income.client_id || '',
+      project_id: income.project_id || '',
       date: income.date,
       notes: income.notes || '',
     } : {
       date: new Date().toISOString().split('T')[0],
+      client_id: '',
+      project_id: '',
     },
   })
 
@@ -135,6 +157,7 @@ export function IncomeFormDialog({ open, onOpenChange, income }: IncomeFormDialo
         category_id: data.category_id,
         account_id: data.account_id,
         client_id: data.client_id || null,
+        project_id: data.project_id || null,
         date: data.date,
         notes: data.notes || null,
       })
@@ -145,6 +168,7 @@ export function IncomeFormDialog({ open, onOpenChange, income }: IncomeFormDialo
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
       reset()
       onOpenChange(false)
     },
@@ -160,6 +184,7 @@ export function IncomeFormDialog({ open, onOpenChange, income }: IncomeFormDialo
           category_id: data.category_id,
           account_id: data.account_id,
           client_id: data.client_id || null,
+          project_id: data.project_id || null,
           date: data.date,
           notes: data.notes || null,
         })
@@ -171,6 +196,7 @@ export function IncomeFormDialog({ open, onOpenChange, income }: IncomeFormDialo
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
       reset()
       onOpenChange(false)
     },
@@ -281,6 +307,32 @@ export function IncomeFormDialog({ open, onOpenChange, income }: IncomeFormDialo
                 {clients.map((client: any) => (
                   <SelectItem key={client.id} value={client.id}>
                     {client.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="project_id">Proyecto (opcional)</Label>
+            <Select
+              value={watch('project_id') || 'none'}
+              onValueChange={(value) => setValue('project_id', value === 'none' ? '' : value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sin proyecto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin proyecto</SelectItem>
+                {projects.map((proj: any) => (
+                  <SelectItem key={proj.id} value={proj.id}>
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: proj.color }}
+                      />
+                      {proj.name}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>

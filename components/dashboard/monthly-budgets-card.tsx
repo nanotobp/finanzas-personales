@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { formatCurrency } from '@/lib/utils'
 import { ShoppingBag, Zap, Car, Home, DollarSign, TrendingUp } from 'lucide-react'
 
 const iconMap: Record<string, any> = {
@@ -37,6 +38,7 @@ export function MonthlyBudgetsCard() {
           .from('budgets')
           .select('*, categories(name, icon)')
           .eq('month', currentMonth)
+          .or(`end_date.is.null,end_date.gte.${currentMonth}`)
           .limit(4),
         supabase
           .from('transactions')
@@ -113,7 +115,7 @@ export function MonthlyBudgetsCard() {
                 </div>
                 <span className="text-sm font-semibold">{budget.category}</span>
                 <span className="text-sm text-muted-foreground ml-auto font-medium">
-                  ${budget.current.toFixed(0)} / ${budget.total.toFixed(0)}
+                  {formatCurrency(budget.current)} / {formatCurrency(budget.total)}
                 </span>
               </div>
               <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-muted">

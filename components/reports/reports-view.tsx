@@ -35,35 +35,53 @@ export function ReportsView() {
       const results = await Promise.all(
         months.map(async (month) => {
           const startDate = `${month}-01`
-          const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-            .toISOString().split('T')[0]
+          
+          // Calcular el último día del mes correctamente
+          const [year, monthNum] = month.split('-').map(Number)
+          const lastDay = new Date(year, monthNum, 0).getDate()
+          const endDate = `${year}-${monthNum.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
+
+          const { data: { user } } = await supabase.auth.getUser()
+          if (!user) return { month, income: 0, expenses: 0, profit: 0 }
+
+          console.log(`Consultando datos para ${month}:`, { startDate, endDate, userId: user.id })
 
           const [{ data: income }, { data: allInvoices }, { data: expenses }] = await Promise.all([
             supabase
               .from('transactions')
               .select('amount')
+              .eq('user_id', user.id)
               .eq('type', 'income')
               .gte('date', startDate)
               .lte('date', endDate),
             supabase
               .from('invoices')
               .select('amount, paid_date')
-              .eq('status', 'paid'),
+              .eq('user_id', user.id)
+              .eq('status', 'paid')
+              .not('paid_date', 'is', null)
+              .gte('paid_date', startDate)
+              .lte('paid_date', endDate),
             supabase
               .from('transactions')
               .select('amount')
+              .eq('user_id', user.id)
               .eq('type', 'expense')
               .gte('date', startDate)
               .lte('date', endDate)
           ])
 
-          const invoices = allInvoices?.filter(inv => 
-            inv.paid_date && inv.paid_date >= startDate && inv.paid_date <= endDate
-          ) || []
-
           const totalIncome = (income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0)
-            + (invoices.reduce((sum, i) => sum + Number(i.amount), 0))
+            + (allInvoices?.reduce((sum, i) => sum + Number(i.amount), 0) || 0)
           const totalExpenses = expenses?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
+
+          console.log(`Resultados ${month}:`, { 
+            transactionsIncome: income?.length || 0,
+            paidInvoices: allInvoices?.length || 0, 
+            invoicesAmount: allInvoices?.reduce((sum, i) => sum + Number(i.amount), 0) || 0,
+            totalIncome,
+            totalExpenses 
+          })
 
           return {
             month,
@@ -81,12 +99,16 @@ export function ReportsView() {
   const { data: categoryBreakdown } = useQuery({
     queryKey: ['category-breakdown', selectedYear],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return []
+
       const startDate = `${selectedYear}-01-01`
       const endDate = `${selectedYear}-12-31`
 
       const { data: expenses } = await supabase
         .from('transactions')
         .select('amount, categories(name, color)')
+        .eq('user_id', user.id)
         .eq('type', 'expense')
         .gte('date', startDate)
         .lte('date', endDate)
@@ -106,6 +128,64 @@ export function ReportsView() {
       }, {})
 
       return Object.values(grouped || {})
+    },
+  })
+
+  const { data: projectsBreakdown } = useQuery({
+    queryKey: ['projects-breakdown', selectedYear],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return []
+
+      const startDate = `${selectedYear}-01-01`
+      const endDate = `${selectedYear}-12-31`
+
+      // Obtener proyectos
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', user.id)
+
+      if (!projects || projects.length === 0) return []
+
+      // Obtener ingresos y gastos por proyecto
+      const projectsWithData = await Promise.all(
+        projects.map(async (project) => {
+          const [{ data: income }, { data: expenses }] = await Promise.all([
+            supabase
+              .from('transactions')
+              .select('amount')
+              .eq('user_id', user.id)
+              .eq('type', 'income')
+              .eq('project_id', project.id)
+              .gte('date', startDate)
+              .lte('date', endDate),
+            supabase
+              .from('transactions')
+              .select('amount')
+              .eq('user_id', user.id)
+              .eq('type', 'expense')
+              .eq('project_id', project.id)
+              .gte('date', startDate)
+              .lte('date', endDate)
+          ])
+
+          const totalIncome = income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
+          const totalExpenses = expenses?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
+          const profit = totalIncome - totalExpenses
+
+          return {
+            name: project.name,
+            income: totalIncome,
+            expenses: totalExpenses,
+            profit,
+            color: project.color || '#3b82f6'
+          }
+        })
+      )
+
+      // Filtrar proyectos con actividad
+      return projectsWithData.filter(p => p.income > 0 || p.expenses > 0)
     },
   })
 
@@ -178,7 +258,7 @@ export function ReportsView() {
   const pieChartOption = {
     tooltip: {
       trigger: 'item',
-      formatter: '{b}: ₲ {c} ({d}%)'
+      formatter: (params: any) => `${params.name}: ${formatCurrency(params.value)} (${params.percent}%)`
     },
     legend: {
       bottom: 0,
@@ -194,6 +274,76 @@ export function ReportsView() {
             shadowBlur: 10,
             shadowOffsetX: 0,
             shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        }
+      }
+    ]
+  }
+
+  const projectsChartOption = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      },
+      formatter: (params: any) => {
+        const project = params[0]
+        return `
+          <div style="padding: 4px 8px;">
+            <strong>${project.name}</strong><br/>
+            ${params.map((p: any) => `
+              <span style="color: ${p.color}">●</span> ${p.seriesName}: ${formatCurrency(p.value)}
+            `).join('<br/>')}
+          </div>
+        `
+      }
+    },
+    legend: {
+      data: ['Ingresos', 'Gastos', 'Rentabilidad'],
+      bottom: 0
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '15%',
+      top: '3%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: projectsBreakdown?.map(p => p.name) || [],
+      axisLabel: {
+        rotate: 30,
+        fontSize: 11
+      }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        formatter: (value: number) => formatCurrency(value)
+      }
+    },
+    series: [
+      {
+        name: 'Ingresos',
+        type: 'bar',
+        data: projectsBreakdown?.map(p => p.income) || [],
+        itemStyle: { color: '#10b981' }
+      },
+      {
+        name: 'Gastos',
+        type: 'bar',
+        data: projectsBreakdown?.map(p => p.expenses) || [],
+        itemStyle: { color: '#ef4444' }
+      },
+      {
+        name: 'Rentabilidad',
+        type: 'bar',
+        data: projectsBreakdown?.map(p => p.profit) || [],
+        itemStyle: {
+          color: (params: any) => {
+            const profit = projectsBreakdown?.[params.dataIndex]?.profit || 0
+            return profit >= 0 ? '#3b82f6' : '#f59e0b'
           }
         }
       }
@@ -340,14 +490,34 @@ export function ReportsView() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Gastos por Categoría (Anual)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ReactECharts option={pieChartOption} style={{ height: '400px' }} />
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Gastos por Categoría (Anual)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReactECharts option={pieChartOption} style={{ height: '400px' }} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Rentabilidad por Proyecto (Anual)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {projectsBreakdown && projectsBreakdown.length > 0 ? (
+              <ReactECharts option={projectsChartOption} style={{ height: '400px' }} />
+            ) : (
+              <div className="flex items-center justify-center h-[400px] text-gray-500">
+                <div className="text-center">
+                  <p className="text-lg font-medium mb-2">No hay datos de proyectos</p>
+                  <p className="text-sm">Asigna transacciones a proyectos para ver estadísticas</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

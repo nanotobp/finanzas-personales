@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Printer, Download, Loader2, FileText, TrendingUp, DollarSign, Calendar } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { formatCurrency } from '@/lib/utils'
 import { format, startOfMonth, startOfYear, getMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -56,6 +57,59 @@ export function FinancialStatementGenerator() {
       if (error && error.code !== 'PGRST116') throw error
       return data as IncomeStatement | null
     }
+  })
+
+  // Query para obtener desglose por proyectos
+  const { data: projectsBreakdown } = useQuery({
+    queryKey: ['projects-breakdown', selectedMonth],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No autenticado')
+
+      // Obtener todos los proyectos activos
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('id, name, color')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('name')
+
+      if (!projects) return []
+
+      // Para cada proyecto, calcular ingresos y gastos del mes
+      const breakdown = await Promise.all(
+        projects.map(async (project) => {
+          const monthStart = new Date(selectedMonth)
+          const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0)
+
+          const { data: transactions } = await supabase
+            .from('transactions')
+            .select('type, amount')
+            .eq('user_id', user.id)
+            .eq('project_id', project.id)
+            .gte('date', monthStart.toISOString())
+            .lte('date', monthEnd.toISOString())
+
+          const income = transactions
+            ?.filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + t.amount, 0) || 0
+
+          const expenses = transactions
+            ?.filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0) || 0
+
+          return {
+            ...project,
+            income,
+            expenses,
+            profit: income - expenses
+          }
+        })
+      )
+
+      return breakdown.filter(p => p.income > 0 || p.expenses > 0)
+    },
+    enabled: !!incomeStatement
   })
 
   // Mutation para generar estado de resultados
@@ -200,13 +254,13 @@ export function FinancialStatementGenerator() {
                     <div className="flex justify-between">
                       <span>Ingresos totales</span>
                       <span className="font-mono">
-                        ₲ {incomeStatement.total_revenue.toLocaleString('es-PY')}
+                        {formatCurrency(incomeStatement.total_revenue)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm text-muted-foreground">
                       <span>IVA cobrado</span>
                       <span className="font-mono">
-                        ₲ {incomeStatement.iva_collected.toLocaleString('es-PY')}
+                        {formatCurrency(incomeStatement.iva_collected)}
                       </span>
                     </div>
                   </div>
@@ -216,7 +270,7 @@ export function FinancialStatementGenerator() {
                   <div className="flex justify-between font-semibold text-lg">
                     <span>Utilidad Bruta</span>
                     <span className="font-mono text-green-600">
-                      ₲ {incomeStatement.gross_profit.toLocaleString('es-PY')}
+                      {formatCurrency(incomeStatement.gross_profit)}
                     </span>
                   </div>
                 </div>
@@ -231,13 +285,13 @@ export function FinancialStatementGenerator() {
                     <div className="flex justify-between">
                       <span>Gastos totales</span>
                       <span className="font-mono text-red-600">
-                        (₲ {incomeStatement.operating_expenses.toLocaleString('es-PY')})
+                        ({formatCurrency(incomeStatement.operating_expenses)})
                       </span>
                     </div>
                     <div className="flex justify-between text-sm text-muted-foreground">
                       <span>IVA pagado</span>
                       <span className="font-mono">
-                        ₲ {incomeStatement.iva_paid.toLocaleString('es-PY')}
+                        {formatCurrency(incomeStatement.iva_paid)}
                       </span>
                     </div>
                   </div>
@@ -246,8 +300,8 @@ export function FinancialStatementGenerator() {
                 <div className="border-t pt-4">
                   <div className="flex justify-between font-semibold text-lg">
                     <span>Utilidad Operativa</span>
-                    <span className={`font-mono ${incomeStatement.operating_income >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      ₲ {incomeStatement.operating_income.toLocaleString('es-PY')}
+                    <span className={`font-mono ${ incomeStatement.operating_income >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(incomeStatement.operating_income)}
                     </span>
                   </div>
                 </div>
@@ -259,24 +313,64 @@ export function FinancialStatementGenerator() {
                     <div className="flex justify-between">
                       <span>IVA a pagar</span>
                       <span className="font-mono">
-                        ₲ {incomeStatement.iva_payable.toLocaleString('es-PY')}
+                        {formatCurrency(incomeStatement.iva_payable)}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>IRP retenido</span>
                       <span className="font-mono">
-                        ₲ {incomeStatement.irp_withholding.toLocaleString('es-PY')}
+                        {formatCurrency(incomeStatement.irp_withholding)}
                       </span>
                     </div>
                   </div>
                 </div>
+
+                {/* Desglose por Proyectos */}
+                {projectsBreakdown && projectsBreakdown.length > 0 && (
+                  <div className="border-t pt-4">
+                    <h3 className="font-semibold text-lg mb-3">Desglose por Proyectos</h3>
+                    <div className="space-y-3 pl-7">
+                      {projectsBreakdown.map((project) => (
+                        <div key={project.id} className="space-y-1">
+                          <div className="flex items-center gap-2 font-medium">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: project.color }}
+                            />
+                            <span>{project.name}</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-sm pl-5">
+                            <div>
+                              <span className="text-muted-foreground">Ingresos: </span>
+                              <span className="font-mono text-green-600">
+                                {formatCurrency(project.income)}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Gastos: </span>
+                              <span className="font-mono text-red-600">
+                                {formatCurrency(project.expenses)}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Utilidad: </span>
+                              <span className={`font-mono ${project.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {formatCurrency(project.profit)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Resultado Final */}
                 <div className="border-t-2 border-gray-300 pt-4">
                   <div className="flex justify-between font-bold text-xl">
                     <span>Utilidad Neta</span>
                     <span className={`font-mono ${incomeStatement.net_income >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      ₲ {incomeStatement.net_income.toLocaleString('es-PY')}
+                      {formatCurrency(incomeStatement.net_income)}
                     </span>
                   </div>
                 </div>

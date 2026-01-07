@@ -16,16 +16,10 @@ export function UpcomingSubscriptions({ userId }: UpcomingSubscriptionsProps) {
   const { data: subscriptions } = useQuery({
     queryKey: ['upcoming-subscriptions'],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0]
-      const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        .toISOString().split('T')[0]
-
       const { data } = await supabase
         .from('subscriptions')
         .select('*, categories(name, icon)')
         .eq('is_active', true)
-        .gte('next_billing_date', today)
-        .lte('next_billing_date', in30Days)
         .order('next_billing_date', { ascending: true })
         .limit(8)
 
@@ -36,7 +30,7 @@ export function UpcomingSubscriptions({ userId }: UpcomingSubscriptionsProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Próximas Suscripciones</CardTitle>
+        <CardTitle>Suscripciones Activas</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
@@ -63,7 +57,7 @@ export function UpcomingSubscriptions({ userId }: UpcomingSubscriptionsProps) {
                   <div>
                     <p className="font-medium text-sm">{subscription.name}</p>
                     <p className="text-xs text-gray-500">
-                      {subscription.categories?.icon} {subscription.categories?.name} • en {daysUntil}{' '}
+                      {subscription.categories?.icon} {subscription.categories?.name} • vence en {daysUntil}{' '}
                       {daysUntil === 1 ? 'día' : 'días'}
                     </p>
                   </div>
@@ -77,7 +71,7 @@ export function UpcomingSubscriptions({ userId }: UpcomingSubscriptionsProps) {
           })}
           {(!subscriptions || subscriptions.length === 0) && (
             <p className="text-center text-gray-500 py-8">
-              No hay suscripciones próximas
+              No hay suscripciones activas
             </p>
           )}
         </div>

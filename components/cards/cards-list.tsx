@@ -206,8 +206,8 @@ export function CardsList() {
                       </div>
 
                       <div className="flex justify-between text-sm pt-3 border-t">
-                        <span className="text-gray-600">Cierre: {card.billing_day}</span>
-                        <span className="text-gray-600">Pago: {card.payment_day}</span>
+                        <span className="text-gray-600">Cierre: {card.close_day}</span>
+                        <span className="text-gray-600">Vencimiento: {card.due_day}</span>
                       </div>
                       <div className="flex gap-2 mt-3">
                         <Button

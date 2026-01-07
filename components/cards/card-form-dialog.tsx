@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -26,11 +26,11 @@ import {
 const cardSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
   last_four: z.string().regex(/^\d{4}$/, 'Debe ser 4 dígitos'),
-  credit_limit: z.string().min(1, 'El límite de crédito es requerido'),
-  available_credit: z.string().optional(),
-  billing_day: z.string().min(1, 'El día de corte es requerido'),
-  payment_day: z.string().min(1, 'El día de pago es requerido'),
-  issuer: z.string().optional(),
+  brand: z.string().min(1, 'La marca es requerida'),
+  limit: z.string().min(1, 'El límite de crédito es requerido'),
+  close_day: z.string().min(1, 'El día de cierre es requerido'),
+  due_day: z.string().min(1, 'El día de vencimiento es requerido'),
+  is_active: z.boolean().optional(),
 })
 
 type CardFormData = z.infer<typeof cardSchema>
@@ -55,19 +55,38 @@ export function CardFormDialog({ open, onOpenChange, card }: CardFormDialogProps
     formState: { errors },
   } = useForm<CardFormData>({
     resolver: zodResolver(cardSchema),
-    defaultValues: card ? {
-      name: card.name,
-      last_four: card.last_four,
-      credit_limit: card.credit_limit.toString(),
-      available_credit: card.available_credit?.toString() || '',
-      billing_day: card.billing_day.toString(),
-      payment_day: card.payment_day.toString(),
-      issuer: card.issuer || '',
-    } : {
-      billing_day: '1',
-      payment_day: '15',
+    defaultValues: {
+      brand: 'Visa',
+      close_day: '1',
+      due_day: '15',
+      is_active: true,
     },
   })
+
+  // Reset form when card changes
+  useEffect(() => {
+    if (card) {
+      reset({
+        name: card.name,
+        last_four: card.last_four,
+        brand: card.brand,
+        limit: card.limit?.toString() || '',
+        close_day: card.close_day?.toString() || '1',
+        due_day: card.due_day?.toString() || '15',
+        is_active: card.is_active ?? true,
+      })
+    } else {
+      reset({
+        name: '',
+        last_four: '',
+        brand: 'Visa',
+        limit: '',
+        close_day: '1',
+        due_day: '15',
+        is_active: true,
+      })
+    }
+  }, [card, reset])
 
   const createMutation = useMutation({
     mutationFn: async (data: CardFormData) => {
@@ -78,11 +97,11 @@ export function CardFormDialog({ open, onOpenChange, card }: CardFormDialogProps
         user_id: user.id,
         name: data.name,
         last_four: data.last_four,
-        credit_limit: parseFloat(data.credit_limit),
-        available_credit: data.available_credit ? parseFloat(data.available_credit) : parseFloat(data.credit_limit),
-        billing_day: parseInt(data.billing_day),
-        payment_day: parseInt(data.payment_day),
-        issuer: data.issuer || null,
+        brand: data.brand,
+        limit: parseFloat(data.limit),
+        close_day: parseInt(data.close_day),
+        due_day: parseInt(data.due_day),
+        is_active: data.is_active ?? true,
       })
 
       if (error) throw error
@@ -101,11 +120,11 @@ export function CardFormDialog({ open, onOpenChange, card }: CardFormDialogProps
         .update({
           name: data.name,
           last_four: data.last_four,
-          credit_limit: parseFloat(data.credit_limit),
-          available_credit: data.available_credit ? parseFloat(data.available_credit) : parseFloat(data.credit_limit),
-          billing_day: parseInt(data.billing_day),
-          payment_day: parseInt(data.payment_day),
-          issuer: data.issuer || null,
+          brand: data.brand,
+          limit: parseFloat(data.limit),
+          close_day: parseInt(data.close_day),
+          due_day: parseInt(data.due_day),
+          is_active: data.is_active ?? true,
         })
         .eq('id', card.id)
 
@@ -151,61 +170,63 @@ export function CardFormDialog({ open, onOpenChange, card }: CardFormDialogProps
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="issuer">Banco Emisor (opcional)</Label>
-            <Input
-              id="issuer"
-              placeholder="Ej: Banco Nacional"
-              {...register('issuer')}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="brand">Marca</Label>
+              <Select
+                value={watch('brand')}
+                onValueChange={(value) => setValue('brand', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Visa">Visa</SelectItem>
+                  <SelectItem value="Mastercard">Mastercard</SelectItem>
+                  <SelectItem value="American Express">American Express</SelectItem>
+                  <SelectItem value="Dinners">Dinners</SelectItem>
+                  <SelectItem value="Otra">Otra</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.brand && (
+                <p className="text-sm text-red-500">{errors.brand.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="last_four">Últimos 4 Dígitos</Label>
+              <Input
+                id="last_four"
+                maxLength={4}
+                placeholder="1234"
+                {...register('last_four')}
+              />
+              {errors.last_four && (
+                <p className="text-sm text-red-500">{errors.last_four.message}</p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="last_four">Últimos 4 Dígitos</Label>
+            <Label htmlFor="limit">Límite de Crédito (Gs.)</Label>
             <Input
-              id="last_four"
-              maxLength={4}
-              placeholder="1234"
-              {...register('last_four')}
+              id="limit"
+              type="number"
+              step="1"
+              placeholder="10000000"
+              {...register('limit')}
             />
-            {errors.last_four && (
-              <p className="text-sm text-red-500">{errors.last_four.message}</p>
+            {errors.limit && (
+              <p className="text-sm text-red-500">{errors.limit.message}</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="credit_limit">Límite de Crédito</Label>
-              <Input
-                id="credit_limit"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                {...register('credit_limit')}
-              />
-              {errors.credit_limit && (
-                <p className="text-sm text-red-500">{errors.credit_limit.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="available_credit">Crédito Disponible</Label>
-              <Input
-                id="available_credit"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                {...register('available_credit')}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="billing_day">Día de Corte</Label>
+              <Label htmlFor="close_day">Día de Cierre</Label>
               <Select
-                value={watch('billing_day')}
-                onValueChange={(value) => setValue('billing_day', value)}
+                value={watch('close_day')}
+                onValueChange={(value) => setValue('close_day', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Día" />
@@ -218,16 +239,16 @@ export function CardFormDialog({ open, onOpenChange, card }: CardFormDialogProps
                   ))}
                 </SelectContent>
               </Select>
-              {errors.billing_day && (
-                <p className="text-sm text-red-500">{errors.billing_day.message}</p>
+              {errors.close_day && (
+                <p className="text-sm text-red-500">{errors.close_day.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="payment_day">Día de Pago</Label>
+              <Label htmlFor="due_day">Día de Vencimiento</Label>
               <Select
-                value={watch('payment_day')}
-                onValueChange={(value) => setValue('payment_day', value)}
+                value={watch('due_day')}
+                onValueChange={(value) => setValue('due_day', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Día" />
@@ -240,8 +261,8 @@ export function CardFormDialog({ open, onOpenChange, card }: CardFormDialogProps
                   ))}
                 </SelectContent>
               </Select>
-              {errors.payment_day && (
-                <p className="text-sm text-red-500">{errors.payment_day.message}</p>
+              {errors.due_day && (
+                <p className="text-sm text-red-500">{errors.due_day.message}</p>
               )}
             </div>
           </div>

@@ -26,8 +26,8 @@ import {
 const budgetSchema = z.object({
   category_id: z.string().min(1, 'La categoría es requerida'),
   amount: z.string().min(1, 'El monto es requerido'),
-  period: z.string().min(1, 'El período es requerido'),
-  start_date: z.string().min(1, 'La fecha de inicio es requerida'),
+  month: z.string().min(1, 'El mes es requerido'),
+  end_date: z.string().optional(),
 })
 
 type BudgetFormData = z.infer<typeof budgetSchema>
@@ -73,11 +73,11 @@ export function BudgetFormDialog({ open, onOpenChange, budget }: BudgetFormDialo
     defaultValues: budget ? {
       category_id: budget.category_id,
       amount: budget.amount.toString(),
-      period: budget.period,
-      start_date: budget.start_date,
+      month: budget.month,
+      end_date: budget.end_date || '',
     } : {
-      period: 'monthly',
-      start_date: new Date().toISOString().split('T')[0],
+      month: new Date().toISOString().slice(0, 7),
+      end_date: '',
     },
   })
 
@@ -90,8 +90,8 @@ export function BudgetFormDialog({ open, onOpenChange, budget }: BudgetFormDialo
         user_id: user.id,
         category_id: data.category_id,
         amount: parseFloat(data.amount),
-        period: data.period,
-        start_date: data.start_date,
+        month: data.month,
+        end_date: data.end_date || null,
       })
 
       if (error) throw error
@@ -110,8 +110,8 @@ export function BudgetFormDialog({ open, onOpenChange, budget }: BudgetFormDialo
         .update({
           category_id: data.category_id,
           amount: parseFloat(data.amount),
-          period: data.period,
-          start_date: data.start_date,
+          month: data.month,
+          end_date: data.end_date || null,
         })
         .eq('id', budget.id)
 
@@ -182,36 +182,28 @@ export function BudgetFormDialog({ open, onOpenChange, budget }: BudgetFormDialo
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="period">Período</Label>
-            <Select
-              value={watch('period')}
-              onValueChange={(value) => setValue('period', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="weekly">Semanal</SelectItem>
-                <SelectItem value="monthly">Mensual</SelectItem>
-                <SelectItem value="quarterly">Trimestral</SelectItem>
-                <SelectItem value="yearly">Anual</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.period && (
-              <p className="text-sm text-red-500">{errors.period.message}</p>
+            <Label htmlFor="month">Mes</Label>
+            <Input
+              id="month"
+              type="month"
+              {...register('month')}
+            />
+            {errors.month && (
+              <p className="text-sm text-red-500">{errors.month.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="start_date">Fecha de Inicio</Label>
+            <Label htmlFor="end_date">Fecha de Fin (opcional)</Label>
             <Input
-              id="start_date"
-              type="date"
-              {...register('start_date')}
+              id="end_date"
+              type="month"
+              placeholder="Dejar vacío para presupuesto indefinido"
+              {...register('end_date')}
             />
-            {errors.start_date && (
-              <p className="text-sm text-red-500">{errors.start_date.message}</p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Para deudas o gastos temporales, establece hasta qué mes aplica este presupuesto
+            </p>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

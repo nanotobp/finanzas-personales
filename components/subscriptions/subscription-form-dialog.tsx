@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -30,8 +30,6 @@ const subscriptionSchema = z.object({
   billing_cycle: z.string().min(1, 'El ciclo de facturación es requerido'),
   next_billing_date: z.string().min(1, 'La próxima fecha es requerida'),
   is_active: z.boolean(),
-  category: z.string().optional(),
-  notes: z.string().optional(),
 })
 
 type SubscriptionFormData = z.infer<typeof subscriptionSchema>
@@ -56,20 +54,33 @@ export function SubscriptionFormDialog({ open, onOpenChange, subscription }: Sub
     formState: { errors },
   } = useForm<SubscriptionFormData>({
     resolver: zodResolver(subscriptionSchema),
-    defaultValues: subscription ? {
-      name: subscription.name,
-      amount: subscription.amount.toString(),
-      billing_cycle: subscription.billing_cycle,
-      next_billing_date: subscription.next_billing_date,
-      is_active: subscription.is_active,
-      category: subscription.category || '',
-      notes: subscription.notes || '',
-    } : {
+    defaultValues: {
       billing_cycle: 'monthly',
       is_active: true,
       next_billing_date: new Date().toISOString().split('T')[0],
     },
   })
+
+  // Reset form when subscription changes
+  useEffect(() => {
+    if (subscription) {
+      reset({
+        name: subscription.name,
+        amount: subscription.amount.toString(),
+        billing_cycle: subscription.billing_cycle,
+        next_billing_date: subscription.next_billing_date,
+        is_active: subscription.is_active,
+      })
+    } else {
+      reset({
+        name: '',
+        amount: '',
+        billing_cycle: 'monthly',
+        is_active: true,
+        next_billing_date: new Date().toISOString().split('T')[0],
+      })
+    }
+  }, [subscription, reset])
 
   const createMutation = useMutation({
     mutationFn: async (data: SubscriptionFormData) => {
@@ -83,8 +94,6 @@ export function SubscriptionFormDialog({ open, onOpenChange, subscription }: Sub
         billing_cycle: data.billing_cycle,
         next_billing_date: data.next_billing_date,
         is_active: data.is_active,
-        category: data.category || null,
-        notes: data.notes || null,
       })
 
       if (error) throw error
@@ -106,8 +115,6 @@ export function SubscriptionFormDialog({ open, onOpenChange, subscription }: Sub
           billing_cycle: data.billing_cycle,
           next_billing_date: data.next_billing_date,
           is_active: data.is_active,
-          category: data.category || null,
-          notes: data.notes || null,
         })
         .eq('id', subscription.id)
 
@@ -189,7 +196,7 @@ export function SubscriptionFormDialog({ open, onOpenChange, subscription }: Sub
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="next_billing_date">Próxima Fecha de Cobro</Label>
+            <Label htmlFor="next_billing_date">Próxima Fecha de Pago</Label>
             <Input
               id="next_billing_date"
               type="date"
@@ -198,15 +205,6 @@ export function SubscriptionFormDialog({ open, onOpenChange, subscription }: Sub
             {errors.next_billing_date && (
               <p className="text-sm text-red-500">{errors.next_billing_date.message}</p>
             )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="category">Categoría (opcional)</Label>
-            <Input
-              id="category"
-              placeholder="Ej: Entretenimiento, Software"
-              {...register('category')}
-            />
           </div>
 
           <div className="flex items-center justify-between">

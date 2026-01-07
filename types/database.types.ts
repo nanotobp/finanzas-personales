@@ -206,6 +206,7 @@ export interface Database {
           category_id: string
           amount: number
           month: string
+          end_date: string | null
           project_id: string | null
           created_at: string
           updated_at: string
@@ -216,6 +217,7 @@ export interface Database {
           category_id: string
           amount: number
           month: string
+          end_date?: string | null
           project_id?: string | null
           created_at?: string
           updated_at?: string
@@ -226,6 +228,7 @@ export interface Database {
           category_id?: string
           amount?: number
           month?: string
+          end_date?: string | null
           project_id?: string | null
           created_at?: string
           updated_at?: string

@@ -70,8 +70,8 @@ export function IncomeExpensesChart() {
           const [year, month] = key.split('-')
           return {
             month: monthNames[parseInt(month) - 1],
-            income: values.income / 1000, // Convertir a miles
-            expenses: values.expenses / 1000
+            income: values.income,
+            expenses: values.expenses
           }
         })
     },

@@ -1,14 +1,33 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
-import { FolderKanban, TrendingUp, TrendingDown } from 'lucide-react'
+import { FolderKanban, TrendingUp, TrendingDown, Plus, Pencil, Trash2 } from 'lucide-react'
+import { ProjectFormDialog } from './project-form-dialog'
 
 export function ProjectsList() {
   const supabase = createClient()
+  const queryClient = useQueryClient()
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<any>(null)
   const currentMonth = new Date().toISOString().slice(0, 7)
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+    },
+  })
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ['projects', currentMonth],
@@ -119,7 +138,13 @@ export function ProjectsList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Proyectos</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Lista de Proyectos</CardTitle>
+            <Button onClick={() => {setSelectedProject(null); setDialogOpen(true)}}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Proyecto
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -173,6 +198,29 @@ export function ProjectsList() {
                           {project.profit >= 0 ? '+' : ''}{formatCurrency(project.profit)}
                         </p>
                       </div>
+
+                      <div className="flex gap-2 mt-4 pt-4 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => {setSelectedProject(project); setDialogOpen(true)}}
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm('¿Eliminar este proyecto?')) {
+                              deleteMutation.mutate(project.id)
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -184,10 +232,20 @@ export function ProjectsList() {
             <div className="text-center py-12 text-gray-500">
               <FolderKanban className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <p>No hay proyectos registrados</p>
+              <Button onClick={() => {setSelectedProject(null); setDialogOpen(true)}} className="mt-4">
+                <Plus className="h-4 w-4 mr-2" />
+                Crear Primer Proyecto
+              </Button>
             </div>
           )}
         </CardContent>
       </Card>
+
+      <ProjectFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        project={selectedProject}
+      />
     </div>
   )
 }
