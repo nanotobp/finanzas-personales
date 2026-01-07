@@ -7,24 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatShortDate } from '@/lib/utils'
-import { Search, Filter, Plus, Pencil, Trash2 } from 'lucide-react'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Search, Plus, Pencil, Trash2, FileText } from 'lucide-react'
 import { IncomeFormDialog } from './income-form-dialog'
 
 export function IncomeList() {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedIncome, setSelectedIncome] = useState<any>(null)
-  const currentMonth = new Date().toISOString().slice(0, 7)
+  const [monthFilter, setMonthFilter] = useState<string>(new Date().toISOString().slice(0, 7))
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -40,27 +32,36 @@ export function IncomeList() {
     },
   })
 
-  const { data: categories } = useQuery({
-    queryKey: ['income-categories'],
+  // Query para facturas pagadas
+  const { data: paidInvoices, isLoading: loadingInvoices } = useQuery({
+    queryKey: ['paid-invoices', monthFilter],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('type', 'income')
-        .order('name')
-      return data || []
-    },
-    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
-  })
-
-  const { data: income, isLoading } = useQuery({
-    queryKey: ['income', currentMonth, categoryFilter],
-    queryFn: async () => {
-      const startDate = `${currentMonth}-01`
+      const startDate = `${monthFilter}-01`
       const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
         .toISOString().split('T')[0]
 
-      let query = supabase
+      const { data } = await supabase
+        .from('invoices')
+        .select('*, client:clients(id, name)')
+        .eq('status', 'paid')
+        .gte('paid_date', startDate)
+        .lte('paid_date', endDate)
+        .order('paid_date', { ascending: false })
+
+      return data || []
+    },
+    staleTime: 2 * 60 * 1000,
+  })
+
+  // Query para otros ingresos (no relacionados con facturas)
+  const { data: otherIncome, isLoading: loadingOther } = useQuery({
+    queryKey: ['other-income', monthFilter],
+    queryFn: async () => {
+      const startDate = `${monthFilter}-01`
+      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
+        .toISOString().split('T')[0]
+
+      const { data } = await supabase
         .from('transactions')
         .select('*, categories(name, icon, color), clients(name)')
         .eq('type', 'income')
@@ -68,44 +69,38 @@ export function IncomeList() {
         .lte('date', endDate)
         .order('date', { ascending: false })
 
-      if (categoryFilter !== 'all') {
-        query = query.eq('category_id', categoryFilter)
-      }
-
-      const { data: directIncome } = await query
-
-      // Facturas cobradas
-      const { data: allInvoices } = await supabase
-        .from('invoices')
-        .select('*, client:clients(id, name)')
-        .eq('status', 'paid')
-
-      const invoices = allInvoices?.filter(inv => 
-        inv.paid_date && inv.paid_date >= startDate && inv.paid_date <= endDate
-      ) || []
-
-      // Unificar ingresos directos y facturas cobradas
-      const allIncome = [
-        ...(directIncome || []),
-        ...(invoices.map(inv => ({
-          ...inv,
-          type: 'invoice',
-          description: inv.notes || 'Factura cobrada',
-          date: inv.paid_date,
-          amount: inv.amount,
-          client: inv.client ? { name: inv.client.name, id: inv.client.id } : null,
-        })))
-      ]
-      return allIncome
+      return data || []
     },
-    staleTime: 2 * 60 * 1000, // Cache por 2 minutos
+    staleTime: 2 * 60 * 1000,
   })
 
-  const filteredIncome = income?.filter(item =>
-    item.description.toLowerCase().includes(search.toLowerCase())
+  const isLoading = loadingInvoices || loadingOther
+
+  // Combinar y filtrar todos los ingresos
+  const allIncome = [
+    ...(paidInvoices?.map(inv => ({
+      ...inv,
+      type: 'invoice',
+      description: `Factura ${inv.invoice_number || 'N/A'}`,
+      date: inv.paid_date,
+      amount: inv.amount,
+      client: inv.client ? { name: inv.client.name, id: inv.client.id } : null,
+    })) || []),
+    ...(otherIncome || []),
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+  const filteredIncome = allIncome?.filter(item =>
+    item.description.toLowerCase().includes(search.toLowerCase()) ||
+    item.client?.name?.toLowerCase().includes(search.toLowerCase())
   )
 
   const totalIncome = filteredIncome?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
+  const totalFromInvoices = filteredIncome?.filter(i => i.type === 'invoice').reduce((sum, i) => sum + Number(i.amount), 0) || 0
+  const totalFromOther = filteredIncome?.filter(i => i.type !== 'invoice').reduce((sum, i) => sum + Number(i.amount), 0) || 0
+
+  const totalIncome = filteredIncome?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
+  const totalFromInvoices = filteredIncome?.filter(i => i.type === 'invoice').reduce((sum, i) => sum + Number(i.amount), 0) || 0
+  const totalFromOther = filteredIncome?.filter(i => i.type !== 'invoice').reduce((sum, i) => sum + Number(i.amount), 0) || 0
 
   const handleEdit = (income: any) => {
     setSelectedIncome(income)
@@ -123,20 +118,54 @@ export function IncomeList() {
     setDialogOpen(true)
   }
 
+  // Generar opciones de meses
+  const generateMonthOptions = () => {
+    const months = []
+    const currentDate = new Date()
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+      const monthValue = date.toISOString().slice(0, 7)
+      const monthLabel = date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' })
+      months.push({ value: monthValue, label: monthLabel })
+    }
+    return months
+  }
+
   return (
     <div className="space-y-4">
-      <div className="mb-2 text-xs text-muted-foreground bg-blue-50 p-3 rounded-lg border border-blue-200">
-        <strong>💡 Nota:</strong> Esta vista muestra todos tus ingresos, incluyendo facturas pagadas de clientes y otros ingresos registrados manualmente.
+      {/* Información de la vista */}
+      <div className="mb-2 text-sm bg-blue-50 p-4 rounded-lg border border-blue-200">
+        <div className="flex items-start gap-2">
+          <FileText className="h-5 w-5 text-blue-600 mt-0.5" />
+          <div>
+            <strong className="text-blue-900">Vista de Ingresos por Facturas Pagadas</strong>
+            <p className="text-blue-700 mt-1">
+              Esta vista muestra únicamente los ingresos provenientes de facturas cobradas 
+              desde tu módulo de facturación, más otros ingresos diversos que registres manualmente.
+            </p>
+          </div>
+        </div>
       </div>
+
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <CardTitle>Ingresos del Mes</CardTitle>
-            <Button onClick={handleNewIncome}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Ingreso
-            </Button>
-            <div className="flex gap-2">
+            <CardTitle>Ingresos Totales</CardTitle>
+            <div className="flex gap-2 flex-wrap">
+              {/* Selector de mes */}
+              <select
+                className="px-3 py-2 border rounded-md text-sm"
+                value={monthFilter}
+                onChange={(e) => setMonthFilter(e.target.value)}
+              >
+                {generateMonthOptions().map(month => (
+                  <option key={month.value} value={month.value}>
+                    {month.label}
+                  </option>
+                ))}
+              </select>
+              
+              {/* Buscador */}
               <div className="relative flex-1 md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -146,29 +175,39 @@ export function IncomeList() {
                   className="pl-9"
                 />
               </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {categories?.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.icon} {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              
+              {/* Botón para agregar otros ingresos */}
+              <Button onClick={handleNewIncome} className="whitespace-nowrap">
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Ingreso Varios
+              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 p-4 bg-green-50 rounded-lg">
-            <p className="text-sm text-gray-600">Total de ingresos</p>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+          {/* Resumen de ingresos */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+              <p className="text-sm text-gray-600">Total Ingresos</p>
+              <p className="text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+            </div>
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-gray-600">De Facturas Pagadas</p>
+              <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalFromInvoices)}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {filteredIncome?.filter(i => i.type === 'invoice').length || 0} facturas
+              </p>
+            </div>
+            <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <p className="text-sm text-gray-600">Otros Ingresos</p>
+              <p className="text-2xl font-bold text-purple-600">{formatCurrency(totalFromOther)}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {filteredIncome?.filter(i => i.type !== 'invoice').length || 0} registros
+              </p>
+            </div>
           </div>
 
+          {/* Lista de ingresos */}
           {isLoading ? (
             <div className="text-center py-8 text-gray-500">Cargando...</div>
           ) : (
@@ -178,47 +217,39 @@ export function IncomeList() {
                 return (
                 <div
                   key={item.id}
-                  className={`flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 ${
-                    isInvoice ? 'border-l-4 border-l-blue-500' : ''
+                  className={`flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors ${
+                    isInvoice ? 'border-l-4 border-l-blue-500 bg-blue-50/30' : 'border-l-4 border-l-purple-500 bg-purple-50/30'
                   }`}
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl">{isInvoice ? '📄' : (item.categories?.icon || '💰')}</span>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-medium">{item.description}</p>
                           {isInvoice && (
                             <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
                               Factura Pagada
                             </span>
                           )}
+                          {!isInvoice && item.categories && (
+                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full">
+                              {item.categories.name}
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          {!isInvoice && <span>{item.categories?.name || 'Sin categoría'}</span>}
+                        <div className="flex items-center gap-2 text-sm text-gray-500 mt-1 flex-wrap">
                           {item.client && (
                             <>
-                              {!isInvoice && <span>•</span>}
-                              <span>Cliente: {item.client.name}</span>
+                              <span>👤 {item.client.name}</span>
+                              <span>•</span>
                             </>
                           )}
-                          <span>•</span>
-                          <span>{formatShortDate(item.date)}</span>
-                          {!isInvoice && item.status && (
+                          <span>📅 {formatShortDate(item.date)}</span>
+                          {item.notes && (
                             <>
-                              <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
-                                item.status === 'confirmed'
-                                  ? 'bg-green-100 text-green-700'
-                                  : item.status === 'reconciled'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-yellow-100 text-yellow-700'
-                              }`}>
-                                {item.status === 'confirmed'
-                                  ? 'Confirmado'
-                                  : item.status === 'reconciled'
-                                  ? 'Conciliado'
-                                  : 'Pendiente'}
-                              </span>
+                              <span>•</span>
+                              <span className="text-xs italic">{item.notes}</span>
                             </>
                           )}
                         </div>
@@ -235,6 +266,7 @@ export function IncomeList() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(item)}
+                          title="Editar ingreso"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -242,6 +274,7 @@ export function IncomeList() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(item.id)}
+                          title="Eliminar ingreso"
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
@@ -252,8 +285,10 @@ export function IncomeList() {
                 )
               })}
               {(!filteredIncome || filteredIncome.length === 0) && (
-                <div className="text-center py-8 text-gray-500">
-                  No hay ingresos registrados
+                <div className="text-center py-12 text-gray-500">
+                  <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p className="font-medium">No hay ingresos registrados</p>
+                  <p className="text-sm mt-1">Los ingresos de facturas pagadas aparecerán aquí automáticamente</p>
                 </div>
               )}
             </div>
@@ -269,3 +304,4 @@ export function IncomeList() {
     </div>
   )
 }
+
