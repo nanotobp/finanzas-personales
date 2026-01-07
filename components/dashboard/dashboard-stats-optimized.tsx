@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
 import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useEffect } from 'react'
 
 interface DashboardStatsProps {
   userId: string
@@ -30,6 +31,12 @@ const MiniChart = memo(({ heights, isPositive }: { heights: number[], isPositive
 MiniChart.displayName = 'MiniChart'
 
 export const DashboardStats = memo(function DashboardStats({ userId }: DashboardStatsProps) {
+        useEffect(() => {
+          if (typeof window !== 'undefined') {
+            console.log('DashboardStats userId:', userId)
+            console.log('DashboardStats stats:', stats)
+          }
+        }, [userId, stats])
       // Logs de depuración en el cliente
       import { useEffect } from 'react'
       useEffect(() => {
