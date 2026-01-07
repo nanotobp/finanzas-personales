@@ -53,20 +53,27 @@ export function ReportsView() {
             .gte('date', startDate)
             .lte('date', endDate)
 
-          // Facturas cobradas
+          // Facturas cobradas - TODAS las facturas pagadas para debug
           const { data: invoices, error: invoicesError } = await supabase
             .from('invoices')
-            .select('amount, paid_date, status, user_id, invoice_number')
+            .select('amount, paid_date, status, invoice_number')
             .eq('status', 'paid')
-            .not('paid_date', 'is', null)
-            .gte('paid_date', startDate)
-            .lte('paid_date', endDate)
+
+          console.log(`📊 Total facturas pagadas (sin filtro fecha):`, invoices?.length || 0)
+          console.log('Facturas:', invoices)
+          if (invoicesError) console.error('❌ Error facturas:', invoicesError)
+
+          // Filtrar manualmente por fecha
+          const invoicesInMonth = invoices?.filter(inv => {
+            if (!inv.paid_date) return false
+            const paidDate = inv.paid_date
+            return paidDate >= startDate && paidDate <= endDate
+          }) || []
 
           // Debug: mostrar facturas encontradas
           if (month === new Date().toISOString().slice(0, 7)) {
-            console.log(`📊 Facturas encontradas en ${month}:`, invoices?.length || 0)
-            console.log('Facturas:', invoices)
-            if (invoicesError) console.error('❌ Error facturas:', invoicesError)
+            console.log(`📊 Facturas filtradas en ${month} (${startDate} a ${endDate}):`, invoicesInMonth.length)
+            console.log('Facturas del mes:', invoicesInMonth)
           }
 
           // Gastos
@@ -78,13 +85,13 @@ export function ReportsView() {
             .lte('date', endDate)
 
           const totalIncome = (income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0)
-            + (invoices?.reduce((sum, i) => sum + Number(i.amount), 0) || 0)
+            + (invoicesInMonth?.reduce((sum, i) => sum + Number(i.amount), 0) || 0)
           const totalExpenses = expenses?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
 
           // Debug: mostrar totales del mes actual
           if (month === new Date().toISOString().slice(0, 7)) {
             const incomeFromTransactions = income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
-            const incomeFromInvoices = invoices?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
+            const incomeFromInvoices = invoicesInMonth?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
             console.log(`💰 Ingresos ${month}:`)
             console.log(`  - Transacciones: Gs. ${incomeFromTransactions.toLocaleString('es-PY')}`)
             console.log(`  - Facturas: Gs. ${incomeFromInvoices.toLocaleString('es-PY')}`)
