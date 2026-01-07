@@ -75,21 +75,24 @@ export function IncomeList() {
       const { data: directIncome } = await query
 
       // Facturas cobradas
-      const { data: invoices } = await supabase
+      const { data: allInvoices } = await supabase
         .from('invoices')
         .select('*, client:clients(id, name)')
         .eq('status', 'paid')
-        .gte('paid_date', startDate)
-        .lte('paid_date', endDate)
+
+      const invoices = allInvoices?.filter(inv => 
+        inv.paid_date && inv.paid_date >= startDate && inv.paid_date <= endDate
+      ) || []
 
       // Unificar ingresos directos y facturas cobradas
       const allIncome = [
         ...(directIncome || []),
-        ...((invoices || []).map(inv => ({
+        ...(invoices.map(inv => ({
           ...inv,
           type: 'invoice',
           description: inv.notes || 'Factura cobrada',
           date: inv.paid_date,
+          amount: inv.amount,
           client: inv.client ? { name: inv.client.name, id: inv.client.id } : null,
         })))
       ]
