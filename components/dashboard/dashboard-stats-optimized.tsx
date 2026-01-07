@@ -31,33 +31,19 @@ const MiniChart = memo(({ heights, isPositive }: { heights: number[], isPositive
 MiniChart.displayName = 'MiniChart'
 
 export const DashboardStats = memo(function DashboardStats({ userId }: DashboardStatsProps) {
-        useEffect(() => {
-          if (typeof window !== 'undefined') {
-            console.log('DashboardStats userId:', userId)
-            console.log('DashboardStats stats:', stats)
-          }
-        }, [userId, stats])
-      // Logs de depuración en el cliente
-      import { useEffect } from 'react'
-      useEffect(() => {
-        if (typeof window !== 'undefined') {
-          console.log('DashboardStats userId:', userId)
-          // El valor de stats puede ser undefined al inicio
-          console.log('DashboardStats stats:', stats)
-        }
-      }, [userId, stats])
-    // DEBUG: log userId y stats
+  // Logs de depuración en el cliente
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       console.log('DashboardStats userId:', userId)
+      // El valor de stats puede ser undefined al inicio
+      console.log('DashboardStats stats:', stats)
     }
+  }, [userId, stats])
   const supabase = createClient()
   const currentMonth = useMemo(() => new Date().toISOString().slice(0, 7), [])
 
   const { data: stats } = useQuery({
-      // DEBUG: log stats
-      if (typeof window !== 'undefined') {
-        console.log('DashboardStats stats:', stats)
-      }
+    // ...existing code...
     queryKey: ['dashboard-stats', currentMonth],
     queryFn: async () => {
       const startDate = `${currentMonth}-01`
@@ -77,9 +63,9 @@ export const DashboardStats = memo(function DashboardStats({ userId }: Dashboard
           .eq('is_active', true),
         supabase
           .from('invoices')
-          .select('amount, status, issue_date')
-          .gte('issue_date', startDate)
-          .lte('issue_date', endDate)
+          .select('amount, status, paid_date')
+          .gte('paid_date', startDate)
+          .lte('paid_date', endDate)
           .eq('status', 'paid')
       ])
 
@@ -101,7 +87,7 @@ export const DashboardStats = memo(function DashboardStats({ userId }: Dashboard
         { totalIncome: 0, totalExpenses: 0 }
       )
 
-      // Sumar ingresos de facturas cobradas
+      // Sumar ingresos de facturas cobradas (por fecha de pago)
       const invoiceIncome = paidInvoices.reduce((sum, inv) => sum + (typeof inv.amount === 'string' ? parseFloat(inv.amount) : Number(inv.amount)), 0)
       const finalIncome = totalIncome + invoiceIncome
 
@@ -122,6 +108,15 @@ export const DashboardStats = memo(function DashboardStats({ userId }: Dashboard
     staleTime: 0, // Sin cache, siempre datos frescos
     gcTime: 10 * 60 * 1000,
   })
+    
+  // Logs de depuración en el cliente
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      console.log('DashboardStats userId:', userId)
+      // El valor de stats puede ser undefined al inicio
+      console.log('DashboardStats stats:', stats)
+    }
+  }, [userId, stats])
 
   const statCards = useMemo(() => [
     {
