@@ -98,10 +98,6 @@ export function IncomeList() {
   const totalFromInvoices = filteredIncome?.filter(i => i.type === 'invoice').reduce((sum, i) => sum + Number(i.amount), 0) || 0
   const totalFromOther = filteredIncome?.filter(i => i.type !== 'invoice').reduce((sum, i) => sum + Number(i.amount), 0) || 0
 
-  const totalIncome = filteredIncome?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
-  const totalFromInvoices = filteredIncome?.filter(i => i.type === 'invoice').reduce((sum, i) => sum + Number(i.amount), 0) || 0
-  const totalFromOther = filteredIncome?.filter(i => i.type !== 'invoice').reduce((sum, i) => sum + Number(i.amount), 0) || 0
-
   const handleEdit = (income: any) => {
     setSelectedIncome(income)
     setDialogOpen(true)

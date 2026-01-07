@@ -92,6 +92,8 @@ export default async function DashboardPage() {
   const accounts = accountsResult.data || []
   const paidInvoices = invoicesResult.data || []
 
+  // Ingresos: SOLO de transactions (otros ingresos varios)
+  // Las facturas pagadas YA NO se cuentan aquí porque se muestran en /income
   const { totalIncome, totalExpenses } = transactions.reduce(
     (acc, t) => {
       const amount = Number(t.amount)
@@ -104,6 +106,7 @@ export default async function DashboardPage() {
     },
     { totalIncome: 0, totalExpenses: 0 }
   )
+  // Sumar facturas pagadas como ingresos
   const invoiceIncome = paidInvoices.reduce((sum, inv) => sum + (typeof inv.amount === 'string' ? parseFloat(inv.amount) : Number(inv.amount)), 0)
   const finalIncome = totalIncome + invoiceIncome
   const totalBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0)

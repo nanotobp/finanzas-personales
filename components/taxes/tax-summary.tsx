@@ -53,6 +53,7 @@ export function TaxSummary() {
       const invoiceIncome = invoices.reduce((sum, inv) => sum + Number(inv.amount), 0)
 
       // Calcular totales de transacciones
+      // IVA Ventas: de transactions (otros ingresos) + facturas pagadas
       const ivaVentas = (transactions
         ?.filter(t => t.type === 'income')
         ?.reduce((sum, t) => sum + (Number(t.iva_amount) || 0), 0) || 0) + invoiceIva
@@ -64,6 +65,7 @@ export function TaxSummary() {
       const irpTotal = (transactions
         ?.reduce((sum, t) => sum + (Number(t.irp_amount) || 0), 0) || 0) + invoiceIrp
 
+      // Ingresos totales: otros ingresos de transactions + facturas pagadas
       const ingresosTotales = (transactions
         ?.filter(t => t.type === 'income')
         ?.reduce((sum, t) => sum + Number(t.amount), 0) || 0) + invoiceIncome

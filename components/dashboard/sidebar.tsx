@@ -122,31 +122,35 @@ export function Sidebar() {
       )}>
         {/* Logo */}
         <div className="flex h-[88px] items-center justify-between px-4 border-b border-white/10">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="h-5 w-5 text-white" />
-            </div>
-            {!isCollapsed && (
-              <span className="text-xl font-bold text-white">Finanzas</span>
-            )}
-          </Link>
-          
-          {/* Collapse Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleCollapsed}
-            className={cn(
-              "h-8 w-8 text-white hover:bg-white/10 rounded-full flex-shrink-0",
-              isCollapsed && "mx-auto"
-            )}
-          >
-            {isCollapsed ? (
+          {!isCollapsed ? (
+            <>
+              <Link href="/dashboard" className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-xl font-bold text-white">Finanzas</span>
+              </Link>
+              
+              {/* Collapse Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleCollapsed}
+                className="h-8 w-8 text-white hover:bg-white/10 rounded-full flex-shrink-0"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleCollapsed}
+              className="h-8 w-8 text-white hover:bg-white/10 rounded-full flex-shrink-0 mx-auto"
+            >
               <ChevronRight className="h-5 w-5" />
-            ) : (
-              <ChevronLeft className="h-5 w-5" />
-            )}
-          </Button>
+            </Button>
+          )}
         </div>
 
         {/* Navigation */}
