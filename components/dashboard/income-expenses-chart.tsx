@@ -17,18 +17,24 @@ export function IncomeExpensesChart() {
       const now = new Date()
       const tenMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 9, 1)
 
-      const { data: transactions } = await supabase
-        .from('transactions')
-        .select('type, amount, date')
-        .gte('date', tenMonthsAgo.toISOString().split('T')[0])
-        .order('date')
-
-      if (!transactions) return []
+      const [{ data: transactions }, { data: invoices }] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('type, amount, date')
+          .gte('date', tenMonthsAgo.toISOString().split('T')[0])
+          .order('date'),
+        supabase
+          .from('invoices')
+          .select('amount, paid_date')
+          .eq('status', 'paid')
+          .not('paid_date', 'is', null)
+          .gte('paid_date', tenMonthsAgo.toISOString().split('T')[0])
+      ])
 
       // Agrupar por mes
       const monthlyData: Record<string, { income: number; expenses: number }> = {}
       
-      transactions.forEach(t => {
+      transactions?.forEach(t => {
         const date = new Date(t.date)
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
         
@@ -41,6 +47,18 @@ export function IncomeExpensesChart() {
         } else if (t.type === 'expense') {
           monthlyData[monthKey].expenses += Number(t.amount)
         }
+      })
+
+      // Agregar facturas pagadas
+      invoices?.forEach(invoice => {
+        const date = new Date(invoice.paid_date!)
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+        
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = { income: 0, expenses: 0 }
+        }
+        
+        monthlyData[monthKey].income += Number(invoice.amount)
       })
 
       // Convertir a array y ordenar
