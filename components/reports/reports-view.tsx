@@ -247,6 +247,21 @@ export function ReportsView() {
       <div className="mb-2 text-xs text-muted-foreground bg-blue-50 p-3 rounded-lg border border-blue-200">
         <strong>💡 Nota:</strong> Los reportes incluyen automáticamente todas las facturas pagadas además de los ingresos y gastos registrados manualmente.
       </div>
+
+      {/* DEBUG: Mostrar datos del mes actual */}
+      {yearlyData && (() => {
+        const currentMonthData = yearlyData.find(m => m.month === new Date().toISOString().slice(0, 7))
+        if (currentMonthData) {
+          return (
+            <div className="mb-4 text-xs bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <strong>🔍 Debug - Mes actual ({currentMonthData.month}):</strong><br/>
+              Ingresos: Gs. {currentMonthData.income.toLocaleString('es-PY')}<br/>
+              Gastos: Gs. {currentMonthData.expenses.toLocaleString('es-PY')}<br/>
+              Beneficio: Gs. {currentMonthData.profit.toLocaleString('es-PY')}
+            </div>
+          )
+        }
+      })()}
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
