@@ -30,10 +30,18 @@ const MiniChart = memo(({ heights, isPositive }: { heights: number[], isPositive
 MiniChart.displayName = 'MiniChart'
 
 export const DashboardStats = memo(function DashboardStats({ userId }: DashboardStatsProps) {
+    // DEBUG: log userId y stats
+    if (typeof window !== 'undefined') {
+      console.log('DashboardStats userId:', userId)
+    }
   const supabase = createClient()
   const currentMonth = useMemo(() => new Date().toISOString().slice(0, 7), [])
 
   const { data: stats } = useQuery({
+      // DEBUG: log stats
+      if (typeof window !== 'undefined') {
+        console.log('DashboardStats stats:', stats)
+      }
     queryKey: ['dashboard-stats', currentMonth],
     queryFn: async () => {
       const startDate = `${currentMonth}-01`
