@@ -97,7 +97,7 @@ export function NetWorthChart() {
               dataKey="month" 
               tickFormatter={(value) => format(new Date(value + '-01'), 'MMM', { locale: es })}
             />
-            <YAxis tickFormatter={(value) => `Gs ${(value / 1000).toFixed(0)}k`} />
+            <YAxis tickFormatter={(value) => `Gs. ${Math.round(value).toLocaleString('es-PY')}`} />
             <Tooltip 
               formatter={(value: number) => [`Gs ${value.toLocaleString('es-CO')}`, 'Patrimonio Neto']}
               labelFormatter={(label) => format(new Date(label + '-01'), 'MMMM yyyy', { locale: es })}

@@ -160,19 +160,19 @@ export function DebtToIncomeRatio() {
             <div className="flex justify-between">
               <span className="text-xs text-muted-foreground">Ingreso Mensual</span>
               <span className="text-sm font-semibold text-green-600">
-                Gs {((dtiData?.monthlyIncome || 0) / 1000).toFixed(0)}k
+                Gs. {Math.round(dtiData?.monthlyIncome || 0).toLocaleString('es-PY')}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-xs text-muted-foreground">Pagos de Deuda</span>
               <span className="text-sm font-semibold text-red-600">
-                Gs {((dtiData?.monthlyDebtPayments || 0) / 1000).toFixed(0)}k
+                Gs. {Math.round(dtiData?.monthlyDebtPayments || 0).toLocaleString('es-PY')}
               </span>
             </div>
             <div className="flex justify-between border-t pt-2">
               <span className="text-xs text-muted-foreground">Disponible</span>
               <span className={cn('text-sm font-semibold', status.color)}>
-                Gs {((dtiData?.availableIncome || 0) / 1000).toFixed(0)}k
+                Gs. {Math.round(dtiData?.availableIncome || 0).toLocaleString('es-PY')}
               </span>
             </div>
           </div>

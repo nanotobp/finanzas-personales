@@ -109,13 +109,13 @@ export function EmergencyFundCoverage() {
             <div>
               <p className="text-xs text-muted-foreground">Balance Total</p>
               <p className="text-sm font-semibold">
-                Gs {((coverageData?.totalBalance || 0) / 1000).toFixed(0)}k
+                Gs. {Math.round(coverageData?.totalBalance || 0).toLocaleString('es-PY')}
               </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Gasto Mensual</p>
               <p className="text-sm font-semibold">
-                Gs {((coverageData?.monthlyExpenses || 0) / 1000).toFixed(0)}k
+                Gs. {Math.round(coverageData?.monthlyExpenses || 0).toLocaleString('es-PY')}
               </p>
             </div>
           </div>
@@ -123,7 +123,7 @@ export function EmergencyFundCoverage() {
           {/* Recommendation */}
           {months < 6 && (
             <div className="text-xs text-muted-foreground bg-muted p-3 rounded-lg">
-              💡 Necesitas ahorrar <strong>Gs {(((6 - months) * (coverageData?.monthlyExpenses || 0)) / 1000).toFixed(0)}k</strong> adicionales para completar tu fondo de emergencia.
+              💡 Necesitas ahorrar <strong>Gs. {Math.round((6 - months) * (coverageData?.monthlyExpenses || 0)).toLocaleString('es-PY')}</strong> adicionales para completar tu fondo de emergencia.
             </div>
           )}
         </div>

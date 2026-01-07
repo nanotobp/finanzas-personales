@@ -84,7 +84,7 @@ export function SpendingByDayOfWeek() {
               />
               <YAxis 
                 tick={{ fontSize: 12 }}
-                tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                tickFormatter={(value) => `Gs. ${Math.round(value).toLocaleString('es-PY')}`}
               />
               <Tooltip
                 content={({ active, payload }) => {
@@ -121,7 +121,7 @@ export function SpendingByDayOfWeek() {
             {dayData.slice(0, 4).map((day: any) => (
               <div key={day.day} className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">{day.day}</p>
-                <p className="text-xl font-bold">Gs {(day.total / 1000).toFixed(0)}k</p>
+                <p className="text-xl font-bold">Gs. {Math.round(day.total).toLocaleString('es-PY')}</p>
                 <p className="text-xs text-muted-foreground">{day.count} transacciones</p>
               </div>
             ))}

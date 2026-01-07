@@ -138,19 +138,19 @@ export function SavingsRateGauge() {
             <div className="text-center">
               <p className="text-xs text-muted-foreground">Ingresos</p>
               <p className="text-sm font-semibold text-green-600">
-                Gs {((savingsData?.income || 0) / 1000).toFixed(0)}k
+                Gs. {Math.round(savingsData?.income || 0).toLocaleString('es-PY')}
               </p>
             </div>
             <div className="text-center">
               <p className="text-xs text-muted-foreground">Gastos</p>
               <p className="text-sm font-semibold text-red-600">
-                Gs {((savingsData?.expenses || 0) / 1000).toFixed(0)}k
+                Gs. {Math.round(savingsData?.expenses || 0).toLocaleString('es-PY')}
               </p>
             </div>
             <div className="text-center">
               <p className="text-xs text-muted-foreground">Ahorro</p>
               <p className={cn('text-sm font-semibold', getColor())}>
-                Gs {((savingsData?.savings || 0) / 1000).toFixed(0)}k
+                Gs. {Math.round(savingsData?.savings || 0).toLocaleString('es-PY')}
               </p>
             </div>
           </div>

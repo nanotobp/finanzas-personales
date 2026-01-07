@@ -263,7 +263,7 @@ export function BurnRate() {
               />
               <YAxis 
                 tick={{ fontSize: 11 }}
-                tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                tickFormatter={(value) => `Gs. ${Math.round(value).toLocaleString('es-PY')}`}
               />
               <Tooltip
                 content={({ active, payload }) => {

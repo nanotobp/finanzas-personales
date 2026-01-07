@@ -6,12 +6,22 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
-import { Download, Calendar } from 'lucide-react'
+import { Download, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import ReactECharts from 'echarts-for-react'
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export function ReportsView() {
   const supabase = createClient()
-  const [selectedYear] = useState(new Date().getFullYear())
+  const currentYear = new Date().getFullYear()
+  const [selectedYear, setSelectedYear] = useState(currentYear)
+  const [viewMode, setViewMode] = useState<'year' | 'month'>('year')
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
 
   const { data: yearlyData } = useQuery({
     queryKey: ['yearly-report', selectedYear],
@@ -41,6 +51,7 @@ export function ReportsView() {
             .from('invoices')
             .select('amount')
             .eq('status', 'paid')
+            .not('paid_date', 'is', null)
             .gte('paid_date', startDate)
             .lte('paid_date', endDate)
 
@@ -103,6 +114,20 @@ export function ReportsView() {
   const totalIncome = yearlyData?.reduce((sum, m) => sum + m.income, 0) || 0
   const totalExpenses = yearlyData?.reduce((sum, m) => sum + m.expenses, 0) || 0
   const totalProfit = totalIncome - totalExpenses
+
+  // Datos filtrados según el modo de vista
+  const displayData = viewMode === 'year' 
+    ? yearlyData 
+    : yearlyData?.filter(m => {
+        const monthIndex = parseInt(m.month.split('-')[1]) - 1
+        return monthIndex === selectedMonth
+      })
+
+  const displayIncome = displayData?.reduce((sum, m) => sum + m.income, 0) || 0
+  const displayExpenses = displayData?.reduce((sum, m) => sum + m.expenses, 0) || 0
+  const displayProfit = displayIncome - displayExpenses
+
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
   const lineChartOption = {
     tooltip: {
@@ -207,11 +232,59 @@ export function ReportsView() {
         <strong>💡 Nota:</strong> Los reportes incluyen automáticamente todas las facturas pagadas además de los ingresos y gastos registrados manualmente.
       </div>
       
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2 text-gray-600">
-          <Calendar className="h-5 w-5" />
-          <span className="font-medium">Año {selectedYear}</span>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSelectedYear(y => y - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center gap-2 text-gray-600 min-w-[100px] justify-center">
+              <Calendar className="h-5 w-5" />
+              <span className="font-medium">{selectedYear}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSelectedYear(y => y + 1)}
+              disabled={selectedYear >= currentYear}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <Select value={viewMode} onValueChange={(v: 'year' | 'month') => setViewMode(v)}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="year">Vista Anual</SelectItem>
+              <SelectItem value="month">Vista Mensual</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {viewMode === 'month' && (
+            <Select 
+              value={selectedMonth.toString()} 
+              onValueChange={(v) => setSelectedMonth(parseInt(v))}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthNames.map((name, index) => (
+                  <SelectItem key={index} value={index.toString()}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
+
         <Button onClick={handleExport} variant="outline" className="gap-2">
           <Download className="h-4 w-4" />
           Exportar CSV
@@ -227,7 +300,7 @@ export function ReportsView() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(totalIncome)}
+              {formatCurrency(displayIncome)}
             </div>
           </CardContent>
         </Card>
@@ -240,7 +313,7 @@ export function ReportsView() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(totalExpenses)}
+              {formatCurrency(displayExpenses)}
             </div>
           </CardContent>
         </Card>
@@ -252,8 +325,8 @@ export function ReportsView() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(totalProfit)}
+            <div className={`text-2xl font-bold ${displayProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(displayProfit)}
             </div>
           </CardContent>
         </Card>

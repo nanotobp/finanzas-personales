@@ -144,7 +144,7 @@ export function CashFlowWaterfall() {
             />
             <YAxis 
               tick={{ fontSize: 12 }}
-              tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+              tickFormatter={(value) => `Gs. ${Math.round(value).toLocaleString('es-PY')}`}
             />
             <Tooltip
               content={({ active, payload }) => {
@@ -189,19 +189,19 @@ export function CashFlowWaterfall() {
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Ingresos</p>
             <p className="text-lg font-bold text-green-600">
-              Gs {((cashFlowData[0]?.value || 0) / 1000).toFixed(0)}k
+              Gs. {Math.round(cashFlowData[0]?.value || 0).toLocaleString('es-PY')}
             </p>
           </div>
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Gastos</p>
             <p className="text-lg font-bold text-red-600">
-              Gs {(Math.abs(cashFlowData.slice(1, -1).reduce((sum: number, d: any) => sum + d.value, 0)) / 1000).toFixed(0)}k
+              Gs. {Math.round(Math.abs(cashFlowData.slice(1, -1).reduce((sum: number, d: any) => sum + d.value, 0))).toLocaleString('es-PY')}
             </p>
           </div>
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Balance</p>
             <p className={`text-lg font-bold ${(cashFlowData[cashFlowData.length - 1]?.value || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              Gs {((cashFlowData[cashFlowData.length - 1]?.value || 0) / 1000).toFixed(0)}k
+              Gs. {Math.round(cashFlowData[cashFlowData.length - 1]?.value || 0).toLocaleString('es-PY')}
             </p>
           </div>
         </div>
