@@ -23,14 +23,9 @@ export function ReportsView() {
   const [viewMode, setViewMode] = useState<'year' | 'month'>('year')
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
 
-  const { data: yearlyData, isLoading, error } = useQuery({
+  const { data: yearlyData } = useQuery({
     queryKey: ['yearly-report', selectedYear],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Usuario no autenticado')
-      
-      console.log('👤 User ID:', user.id)
-      
       const months = []
       for (let i = 0; i < 12; i++) {
         const date = new Date(selectedYear, i, 1)
@@ -43,60 +38,32 @@ export function ReportsView() {
           const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
             .toISOString().split('T')[0]
 
-          console.log(`🗓️ Consultando mes ${month}: ${startDate} a ${endDate}`)
+          const [{ data: income }, { data: allInvoices }, { data: expenses }] = await Promise.all([
+            supabase
+              .from('transactions')
+              .select('amount')
+              .eq('type', 'income')
+              .gte('date', startDate)
+              .lte('date', endDate),
+            supabase
+              .from('invoices')
+              .select('amount, paid_date')
+              .eq('status', 'paid'),
+            supabase
+              .from('transactions')
+              .select('amount')
+              .eq('type', 'expense')
+              .gte('date', startDate)
+              .lte('date', endDate)
+          ])
 
-          // Ingresos directos
-          const { data: income } = await supabase
-            .from('transactions')
-            .select('amount')
-            .eq('type', 'income')
-            .gte('date', startDate)
-            .lte('date', endDate)
-
-          // Facturas cobradas - TODAS las facturas pagadas para debug
-          const { data: invoices, error: invoicesError } = await supabase
-            .from('invoices')
-            .select('amount, paid_date, status, invoice_number')
-            .eq('status', 'paid')
-
-          console.log(`📊 Total facturas pagadas (sin filtro fecha):`, invoices?.length || 0)
-          console.log('Facturas:', invoices)
-          if (invoicesError) console.error('❌ Error facturas:', invoicesError)
-
-          // Filtrar manualmente por fecha
-          const invoicesInMonth = invoices?.filter(inv => {
-            if (!inv.paid_date) return false
-            const paidDate = inv.paid_date
-            return paidDate >= startDate && paidDate <= endDate
-          }) || []
-
-          // Debug: mostrar facturas encontradas
-          if (month === new Date().toISOString().slice(0, 7)) {
-            console.log(`📊 Facturas filtradas en ${month} (${startDate} a ${endDate}):`, invoicesInMonth.length)
-            console.log('Facturas del mes:', invoicesInMonth)
-          }
-
-          // Gastos
-          const { data: expenses } = await supabase
-            .from('transactions')
-            .select('amount')
-            .eq('type', 'expense')
-            .gte('date', startDate)
-            .lte('date', endDate)
+          const invoices = allInvoices?.filter(inv => 
+            inv.paid_date && inv.paid_date >= startDate && inv.paid_date <= endDate
+          ) || []
 
           const totalIncome = (income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0)
-            + (invoicesInMonth?.reduce((sum, i) => sum + Number(i.amount), 0) || 0)
+            + (invoices.reduce((sum, i) => sum + Number(i.amount), 0))
           const totalExpenses = expenses?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
-
-          // Debug: mostrar totales del mes actual
-          if (month === new Date().toISOString().slice(0, 7)) {
-            const incomeFromTransactions = income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
-            const incomeFromInvoices = invoicesInMonth?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
-            console.log(`💰 Ingresos ${month}:`)
-            console.log(`  - Transacciones: Gs. ${incomeFromTransactions.toLocaleString('es-PY')}`)
-            console.log(`  - Facturas: Gs. ${incomeFromInvoices.toLocaleString('es-PY')}`)
-            console.log(`  - TOTAL: Gs. ${totalIncome.toLocaleString('es-PY')}`)
-          }
 
           return {
             month,
@@ -263,30 +230,7 @@ export function ReportsView() {
         <strong>💡 Nota:</strong> Los reportes incluyen automáticamente todas las facturas pagadas además de los ingresos y gastos registrados manualmente.
       </div>
 
-      {/* DEBUG: Mostrar datos del mes actual */}
-      {isLoading && <div className="mb-4 text-xs bg-gray-50 p-4 rounded-lg">Cargando datos...</div>}
-      {error && (
-        <div className="mb-4 text-xs bg-red-50 p-4 rounded-lg border border-red-200">
-          <strong>❌ Error:</strong> {(error as Error).message}
-        </div>
-      )}
-      {yearlyData && (() => {
-        const currentMonthData = yearlyData.find(m => m.month === new Date().toISOString().slice(0, 7))
-        if (currentMonthData) {
-          return (
-            <div className="mb-4 text-xs bg-yellow-50 p-4 rounded-lg border border-yellow-200 space-y-1">
-              <strong>🔍 Debug - Mes actual ({currentMonthData.month}):</strong><br/>
-              Ingresos: Gs. {currentMonthData.income.toLocaleString('es-PY')}<br/>
-              Gastos: Gs. {currentMonthData.expenses.toLocaleString('es-PY')}<br/>
-              Beneficio: Gs. {currentMonthData.profit.toLocaleString('es-PY')}<br/>
-              <div className="mt-2 pt-2 border-t border-yellow-300">
-                <strong>Abre la consola del navegador (F12) para ver más detalles de debug</strong>
-              </div>
-            </div>
-          )
-        }
-      })()}
-      
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
