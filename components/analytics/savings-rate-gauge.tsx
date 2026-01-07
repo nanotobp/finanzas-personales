@@ -19,17 +19,30 @@ export function SavingsRateGauge() {
       const startDate = new Date()
       startDate.setDate(startDate.getDate() - 30)
 
-      const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select('type, amount')
-        .eq('user_id', user.id)
-        .gte('date', startDate.toISOString().split('T')[0])
+      const [transactionsResult, invoicesResult] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('type, amount')
+          .eq('user_id', user.id)
+          .gte('date', startDate.toISOString().split('T')[0]),
+        supabase
+          .from('invoices')
+          .select('amount')
+          .eq('user_id', user.id)
+          .eq('status', 'paid')
+          .not('paid_date', 'is', null)
+      ])
 
-      if (error) throw error
+      if (transactionsResult.error) throw transactionsResult.error
+      const transactions = transactionsResult.data || []
+      const invoices = invoicesResult.data || []
 
-      const income = transactions
+      const transactionIncome = transactions
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + Number(t.amount), 0)
+      
+      const invoiceIncome = invoices.reduce((sum, inv) => sum + Number(inv.amount), 0)
+      const income = transactionIncome + invoiceIncome
 
       const expenses = transactions
         .filter(t => t.type === 'expense')

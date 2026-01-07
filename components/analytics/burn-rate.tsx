@@ -20,13 +20,23 @@ export function BurnRate() {
       const sixMonthsAgo = new Date()
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
 
-      const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select('date, type, amount')
-        .eq('user_id', user.id)
-        .gte('date', sixMonthsAgo.toISOString().split('T')[0])
+      const [transactionsResult, invoicesResult] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('date, type, amount')
+          .eq('user_id', user.id)
+          .gte('date', sixMonthsAgo.toISOString().split('T')[0]),
+        supabase
+          .from('invoices')
+          .select('paid_date, amount')
+          .eq('user_id', user.id)
+          .eq('status', 'paid')
+          .not('paid_date', 'is', null)
+      ])
 
-      if (error) throw error
+      if (transactionsResult.error) throw transactionsResult.error
+      const transactions = transactionsResult.data || []
+      const invoices = invoicesResult.data || []
 
       // Agrupar por mes
       const monthlyData: any = {}
@@ -41,6 +51,15 @@ export function BurnRate() {
         } else {
           monthlyData[month].expenses += Number(t.amount)
         }
+      })
+
+      // Agregar ingresos de facturas pagadas
+      invoices.forEach(inv => {
+        const month = inv.paid_date!.substring(0, 7) // YYYY-MM
+        if (!monthlyData[month]) {
+          monthlyData[month] = { income: 0, expenses: 0 }
+        }
+        monthlyData[month].income += Number(inv.amount)
       })
 
       // Convertir a array y calcular burn rate
@@ -102,7 +121,7 @@ export function BurnRate() {
             {/* Main Metric */}
             <div className="text-center">
               <div className="text-4xl font-bold text-red-600">
-                Gs {((burnRateData?.avgBurnRate || 0) / 1000).toFixed(0)}k
+                Gs. {Math.round(burnRateData?.avgBurnRate || 0).toLocaleString('es-PY')}
               </div>
               <div className="text-sm text-muted-foreground mt-1">
                 por mes
@@ -114,7 +133,7 @@ export function BurnRate() {
               <div>
                 <p className="text-xs text-muted-foreground">Ingreso Promedio</p>
                 <p className="text-lg font-semibold text-green-600">
-                  Gs {((burnRateData?.avgIncome || 0) / 1000).toFixed(0)}k
+                  Gs. {Math.round(burnRateData?.avgIncome || 0).toLocaleString('es-PY')}
                 </p>
               </div>
               <div>
@@ -123,7 +142,7 @@ export function BurnRate() {
                   'text-lg font-semibold',
                   isHealthy ? 'text-green-600' : 'text-red-600'
                 )}>
-                  {isHealthy ? '+' : ''}Gs {((burnRateData?.avgNetCashFlow || 0) / 1000).toFixed(0)}k
+                  {isHealthy ? '+' : ''}Gs. {Math.round(burnRateData?.avgNetCashFlow || 0).toLocaleString('es-PY')}
                 </p>
               </div>
             </div>
@@ -188,7 +207,7 @@ export function BurnRate() {
             <div className="text-center pt-4 border-t">
               <p className="text-xs text-muted-foreground">Balance Total</p>
               <p className="text-2xl font-bold">
-                Gs {((burnRateData?.totalBalance || 0) / 1000).toFixed(0)}k
+                Gs. {Math.round(burnRateData?.totalBalance || 0).toLocaleString('es-PY')}
               </p>
             </div>
 

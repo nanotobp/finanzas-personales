@@ -23,18 +23,32 @@ export function CashFlowWaterfall() {
       const endDate = new Date()
       endDate.setDate(0) // Último día del mes anterior
 
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('type, amount, categories(name)')
-        .eq('user_id', user.id)
-        .gte('date', startDate.toISOString().split('T')[0])
-        .lte('date', endDate.toISOString().split('T')[0])
+      const [transactionsResult, invoicesResult] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('type, amount, categories(name)')
+          .eq('user_id', user.id)
+          .gte('date', startDate.toISOString().split('T')[0])
+          .lte('date', endDate.toISOString().split('T')[0]),
+        supabase
+          .from('invoices')
+          .select('amount')
+          .eq('user_id', user.id)
+          .eq('status', 'paid')
+          .gte('paid_date', startDate.toISOString().split('T')[0])
+          .lte('paid_date', endDate.toISOString().split('T')[0])
+      ])
 
-      if (error) throw error
+      if (transactionsResult.error) throw transactionsResult.error
+      const data = transactionsResult.data || []
+      const invoices = invoicesResult.data || []
 
-      const income = data
+      const transactionIncome = data
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + Number(t.amount), 0)
+      
+      const invoiceIncome = invoices.reduce((sum, inv) => sum + Number(inv.amount), 0)
+      const income = transactionIncome + invoiceIncome
 
       const expensesByCategory: Record<string, number> = {}
       data
