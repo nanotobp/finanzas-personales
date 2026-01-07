@@ -63,11 +63,15 @@ export default async function DashboardPage() {
 
   if (!user) return null
 
+  console.log('Dashboard User ID:', user.id)
+
   // Obtener stats del dashboard en el server
   const currentMonth = new Date().toISOString().slice(0, 7)
   const startDate = `${currentMonth}-01`
   const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
     .toISOString().split('T')[0]
+
+  console.log('Date Range:', { startDate, endDate })
 
   // Consultas server-side
   const [transactionsResult, accountsResult, invoicesResult] = await Promise.all([
@@ -83,14 +87,24 @@ export default async function DashboardPage() {
     supabase
       .from('invoices')
       .select('amount, status, paid_date')
+      .eq('status', 'paid')
+      .not('paid_date', 'is', null)
       .gte('paid_date', startDate)
       .lte('paid_date', endDate)
-      .eq('status', 'paid')
   ])
 
   const transactions = transactionsResult.data || []
   const accounts = accountsResult.data || []
   const paidInvoices = invoicesResult.data || []
+
+  console.log('Dashboard Stats Debug:', {
+    month: currentMonth,
+    transactionsCount: transactions.length,
+    paidInvoicesCount: paidInvoices.length,
+    accountsCount: accounts.length,
+    invoicesError: invoicesResult.error,
+    sampleInvoice: paidInvoices[0]
+  })
 
   // Ingresos: SOLO de transactions (otros ingresos varios)
   // Las facturas pagadas YA NO se cuentan aquí porque se muestran en /income
@@ -109,6 +123,12 @@ export default async function DashboardPage() {
   // Sumar facturas pagadas como ingresos
   const invoiceIncome = paidInvoices.reduce((sum, inv) => sum + (typeof inv.amount === 'string' ? parseFloat(inv.amount) : Number(inv.amount)), 0)
   const finalIncome = totalIncome + invoiceIncome
+  
+  console.log('Income Calculation:', {
+    transactionsIncome: totalIncome,
+    invoiceIncome,
+    finalIncome
+  })
   const totalBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
 
   const stats = {
