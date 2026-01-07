@@ -31,10 +31,11 @@ export function TaxSummary() {
           .lte('date', endDate),
         supabase
           .from('invoices')
-          .select('*')
+          .select('amount, iva_amount, irp_withheld, subtotal')
           .eq('user_id', user.id)
-          .gte('issue_date', startDate)
-          .lte('issue_date', endDate),
+          .gte('paid_date', startDate)
+          .lte('paid_date', endDate)
+          .eq('status', 'paid'),
         supabase
           .from('tax_settings')
           .select('*')
@@ -47,23 +48,9 @@ export function TaxSummary() {
       const invoices = invoicesResult.data || []
       const settings = settingsResult.data
 
-      // Calcular IVA e IRP por defecto (10% y 3% respectivamente)
-      const defaultIvaRate = settings?.default_iva_percentage || 10
-      const defaultIrpRate = settings?.default_irp_percentage || 3
-
-      // Calcular IVA de facturas (todas tienen impuestos incluidos)
-      const invoiceIva = invoices.reduce((sum, inv) => {
-        const amount = Number(inv.amount)
-        // IVA incluido: monto / 1.10 * 0.10
-        return sum + (amount / (1 + defaultIvaRate/100) * (defaultIvaRate/100))
-      }, 0)
-
-      const invoiceIrp = invoices.reduce((sum, inv) => {
-        const amount = Number(inv.amount)
-        // IRP sobre el monto bruto
-        return sum + (amount * (defaultIrpRate/100))
-      }, 0)
-
+      // Usar los campos de IVA e IRP calculados y almacenados en las facturas
+      const invoiceIva = invoices.reduce((sum, inv) => sum + (Number(inv.iva_amount) || 0), 0)
+      const invoiceIrp = invoices.reduce((sum, inv) => sum + (Number(inv.irp_withheld) || 0), 0)
       const invoiceIncome = invoices.reduce((sum, inv) => sum + Number(inv.amount), 0)
 
       // Calcular totales de transacciones
@@ -107,7 +94,7 @@ export function TaxSummary() {
   return (
     <div className="space-y-4">
       <div className="mb-2 text-xs text-muted-foreground">
-        <strong>Nota:</strong> Todos los cálculos incluyen automáticamente todas las facturas emitidas este mes (impuestos incluidos).
+        <strong>Nota:</strong> Los cálculos incluyen automáticamente todas las facturas pagadas este mes. El IVA e IRP se calculan según los porcentajes configurados en cada factura.
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>

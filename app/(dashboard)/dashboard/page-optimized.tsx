@@ -70,7 +70,7 @@ export default async function DashboardPage() {
 
       {/* Stats con Suspense */}
       <Suspense fallback={<StatsSkeleton />}>
-        <DashboardStats userId={user.id} />
+        <DashboardStats stats={{ income: 0, expenses: 0, balance: 0, net: 0, balanceChange: 0, incomeChange: 0, expensesChange: 0, netChange: 0 }} />
       </Suspense>
 
       {/* Charts con Suspense */}

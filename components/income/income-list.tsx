@@ -72,8 +72,28 @@ export function IncomeList() {
         query = query.eq('category_id', categoryFilter)
       }
 
-      const { data } = await query
-      return data || []
+      const { data: directIncome } = await query
+
+      // Facturas cobradas
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('*, client:clients(id, name)')
+        .eq('status', 'paid')
+        .gte('paid_date', startDate)
+        .lte('paid_date', endDate)
+
+      // Unificar ingresos directos y facturas cobradas
+      const allIncome = [
+        ...(directIncome || []),
+        ...((invoices || []).map(inv => ({
+          ...inv,
+          type: 'invoice',
+          description: inv.notes || 'Factura cobrada',
+          date: inv.paid_date,
+          client: inv.client ? { name: inv.client.name, id: inv.client.id } : null,
+        })))
+      ]
+      return allIncome
     },
     staleTime: 2 * 60 * 1000, // Cache por 2 minutos
   })
@@ -102,6 +122,9 @@ export function IncomeList() {
 
   return (
     <div className="space-y-4">
+      <div className="mb-2 text-xs text-muted-foreground bg-blue-50 p-3 rounded-lg border border-blue-200">
+        <strong>💡 Nota:</strong> Esta vista muestra todos tus ingresos, incluyendo facturas pagadas de clientes y otros ingresos registrados manualmente.
+      </div>
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -147,41 +170,54 @@ export function IncomeList() {
             <div className="text-center py-8 text-gray-500">Cargando...</div>
           ) : (
             <div className="space-y-2">
-              {filteredIncome?.map((item) => (
+              {filteredIncome?.map((item) => {
+                const isInvoice = item.type === 'invoice'
+                return (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                  className={`flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 ${
+                    isInvoice ? 'border-l-4 border-l-blue-500' : ''
+                  }`}
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl">{item.categories?.icon || '💰'}</span>
+                      <span className="text-2xl">{isInvoice ? '📄' : (item.categories?.icon || '💰')}</span>
                       <div>
-                        <p className="font-medium">{item.description}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{item.description}</p>
+                          {isInvoice && (
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                              Factura Pagada
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <span>{item.categories?.name || 'Sin categoría'}</span>
-                          {item.clients && (
+                          {!isInvoice && <span>{item.categories?.name || 'Sin categoría'}</span>}
+                          {item.client && (
                             <>
-                              <span>•</span>
-                              <span>Cliente: {item.clients.name}</span>
+                              {!isInvoice && <span>•</span>}
+                              <span>Cliente: {item.client.name}</span>
                             </>
                           )}
                           <span>•</span>
                           <span>{formatShortDate(item.date)}</span>
-                          <span
-                            className={`ml-2 px-2 py-0.5 rounded text-xs ${
-                              item.status === 'confirmed'
-                                ? 'bg-green-100 text-green-700'
-                                : item.status === 'reconciled'
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-yellow-100 text-yellow-700'
-                            }`}
-                          >
-                            {item.status === 'confirmed'
-                              ? 'Confirmado'
-                              : item.status === 'reconciled'
-                              ? 'Conciliado'
-                              : 'Pendiente'}
-                          </span>
+                          {!isInvoice && item.status && (
+                            <>
+                              <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
+                                item.status === 'confirmed'
+                                  ? 'bg-green-100 text-green-700'
+                                  : item.status === 'reconciled'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {item.status === 'confirmed'
+                                  ? 'Confirmado'
+                                  : item.status === 'reconciled'
+                                  ? 'Conciliado'
+                                  : 'Pendiente'}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -190,23 +226,28 @@ export function IncomeList() {
                     <span className="text-lg font-semibold text-green-600">
                       +{formatCurrency(Number(item.amount))}
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(item)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(item.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
+                    {!isInvoice && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(item)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
-              ))}
+                )
+              })}
               {(!filteredIncome || filteredIncome.length === 0) && (
                 <div className="text-center py-8 text-gray-500">
                   No hay ingresos registrados

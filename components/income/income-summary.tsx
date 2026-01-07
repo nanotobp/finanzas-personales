@@ -12,35 +12,45 @@ export function IncomeSummary() {
 
   const { data: stats } = useQuery({
     queryKey: ['income-summary', currentMonth],
-    queryFn: async () => {
-      const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      queryFn: async () => {
+        const startDate = `${currentMonth}-01`
+        const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
+          .toISOString().split('T')[0]
 
-      // Total income this month
-      const { data: income } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('type', 'income')
-        .gte('date', startDate)
-        .lte('date', endDate)
+        // Ingresos directos
+        const { data: income } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('type', 'income')
+          .gte('date', startDate)
+          .lte('date', endDate)
 
-      // Total income count
-      const totalIncome = income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
-      const incomeCount = income?.length || 0
+        // Facturas cobradas
+        const { data: invoices } = await supabase
+          .from('invoices')
+          .select('amount')
+          .eq('status', 'paid')
+          .gte('paid_date', startDate)
+          .lte('paid_date', endDate)
 
-      // Get active clients
-      const { data: clients } = await supabase
-        .from('clients')
-        .select('id')
-        .eq('is_active', true)
+        // Clientes activos
+        const { data: clients } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('is_active', true)
 
-      return {
-        totalIncome,
-        incomeCount,
-        activeClients: clients?.length || 0,
-      }
-    },
+        // Calcular totales
+        const totalIncome = (income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0)
+          + (invoices?.reduce((sum, i) => sum + Number(i.amount), 0) || 0)
+        const incomeCount = (income?.length || 0) + (invoices?.length || 0)
+        const activeClients = clients?.length || 0
+
+        return {
+          totalIncome,
+          incomeCount,
+          activeClients,
+        }
+      },
   })
 
   return (
@@ -48,7 +58,7 @@ export function IncomeSummary() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium text-gray-600">
-            Total del Mes
+            Ingresos Totales
           </CardTitle>
           <div className="p-2 rounded-lg bg-green-50">
             <DollarSign className="h-4 w-4 text-green-600" />

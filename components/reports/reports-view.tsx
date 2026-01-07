@@ -28,6 +28,7 @@ export function ReportsView() {
           const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
             .toISOString().split('T')[0]
 
+          // Ingresos directos
           const { data: income } = await supabase
             .from('transactions')
             .select('amount')
@@ -35,6 +36,15 @@ export function ReportsView() {
             .gte('date', startDate)
             .lte('date', endDate)
 
+          // Facturas cobradas
+          const { data: invoices } = await supabase
+            .from('invoices')
+            .select('amount')
+            .eq('status', 'paid')
+            .gte('paid_date', startDate)
+            .lte('paid_date', endDate)
+
+          // Gastos
           const { data: expenses } = await supabase
             .from('transactions')
             .select('amount')
@@ -42,7 +52,8 @@ export function ReportsView() {
             .gte('date', startDate)
             .lte('date', endDate)
 
-          const totalIncome = income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
+          const totalIncome = (income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0)
+            + (invoices?.reduce((sum, i) => sum + Number(i.amount), 0) || 0)
           const totalExpenses = expenses?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
 
           return {
@@ -192,6 +203,10 @@ export function ReportsView() {
 
   return (
     <div className="space-y-6">
+      <div className="mb-2 text-xs text-muted-foreground bg-blue-50 p-3 rounded-lg border border-blue-200">
+        <strong>💡 Nota:</strong> Los reportes incluyen automáticamente todas las facturas pagadas además de los ingresos y gastos registrados manualmente.
+      </div>
+      
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2 text-gray-600">
           <Calendar className="h-5 w-5" />

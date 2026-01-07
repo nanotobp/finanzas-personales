@@ -30,107 +30,22 @@ const MiniChart = memo(({ heights, isPositive }: { heights: number[], isPositive
 ))
 MiniChart.displayName = 'MiniChart'
 
-export const DashboardStats = memo(function DashboardStats({ userId }: DashboardStatsProps) {
-  // Logs de depuración en el cliente
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      console.log('DashboardStats userId:', userId)
-      // El valor de stats puede ser undefined al inicio
-      console.log('DashboardStats stats:', stats)
-    }
-  }, [userId, stats])
-  const supabase = createClient()
-  const currentMonth = useMemo(() => new Date().toISOString().slice(0, 7), [])
-
-  const { data: stats } = useQuery({
-    // ...existing code...
-    queryKey: ['dashboard-stats', currentMonth],
-    queryFn: async () => {
-      const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
-
-      // Optimización: Una sola query con todos los datos
-      const [transactionsResult, accountsResult, invoicesResult] = await Promise.all([
-        supabase
-          .from('transactions')
-          .select('amount, type')
-          .gte('date', startDate)
-          .lte('date', endDate),
-        supabase
-          .from('accounts')
-          .select('balance')
-          .eq('is_active', true),
-        supabase
-          .from('invoices')
-          .select('amount, status, paid_date')
-          .gte('paid_date', startDate)
-          .lte('paid_date', endDate)
-          .eq('status', 'paid')
-      ])
-
-      const transactions = transactionsResult.data || []
-      const accounts = accountsResult.data || []
-      const paidInvoices = invoicesResult.data || []
-
-      // Calcular en una sola pasada
-      const { totalIncome, totalExpenses } = transactions.reduce(
-        (acc, t) => {
-          const amount = Number(t.amount)
-          if (t.type === 'income') {
-            acc.totalIncome += amount
-          } else if (t.type === 'expense') {
-            acc.totalExpenses += amount
-          }
-          return acc
-        },
-        { totalIncome: 0, totalExpenses: 0 }
-      )
-
-      // Sumar ingresos de facturas cobradas (por fecha de pago)
-      const invoiceIncome = paidInvoices.reduce((sum, inv) => sum + (typeof inv.amount === 'string' ? parseFloat(inv.amount) : Number(inv.amount)), 0)
-      const finalIncome = totalIncome + invoiceIncome
-
-      const totalBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
-
-      // Calculate percentage changes (mock data for demo)
-      return {
-        income: finalIncome,
-        expenses: totalExpenses,
-        balance: totalBalance,
-        net: finalIncome - totalExpenses,
-        balanceChange: 3.12,
-        incomeChange: 2.84,
-        expensesChange: -4.78,
-        netChange: 1.98,
-      }
-    },
-    staleTime: 0, // Sin cache, siempre datos frescos
-    gcTime: 10 * 60 * 1000,
-  })
-    
-  // Logs de depuración en el cliente
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      console.log('DashboardStats userId:', userId)
-      // El valor de stats puede ser undefined al inicio
-      console.log('DashboardStats stats:', stats)
-    }
-  }, [userId, stats])
+// Ahora recibe stats como prop
+export const DashboardStats = memo(function DashboardStats({ stats }: { stats: any }) {
 
   const statCards = useMemo(() => [
     {
       title: 'Saldo Total',
       value: stats?.balance || 0,
-      change: stats?.balanceChange || 0,
-      lastMonth: formatCurrency((stats?.balance || 0) * 0.93),
+      change: undefined,
+      lastMonth: '—',
       color: 'emerald',
     },
     {
       title: 'Ingresos del Mes',
       value: stats?.income || 0,
-      change: stats?.incomeChange || 0,
-      lastMonth: formatCurrency((stats?.income || 0) * 0.95),
+      change: undefined,
+      lastMonth: '—',
       color: 'emerald',
       extra: (
         <span className="block text-xs text-muted-foreground mt-1">
@@ -141,15 +56,15 @@ export const DashboardStats = memo(function DashboardStats({ userId }: Dashboard
     {
       title: 'Gastos del Mes',
       value: stats?.expenses || 0,
-      change: stats?.expensesChange || 0,
-      lastMonth: formatCurrency((stats?.expenses || 0) * 1.05),
+      change: undefined,
+      lastMonth: '—',
       color: 'red',
     },
     {
       title: 'Balance Neto',
       value: stats?.net || 0,
-      change: stats?.netChange || 0,
-      lastMonth: formatCurrency((stats?.net || 0) * 0.98),
+      change: undefined,
+      lastMonth: '—',
       color: (stats?.net || 0) >= 0 ? 'emerald' : 'red',
     },
   ], [stats])
@@ -163,7 +78,7 @@ export const DashboardStats = memo(function DashboardStats({ userId }: Dashboard
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2">
       {statCards.map((stat) => {
-        const isPositive = stat.change > 0
+        const isPositive = stat.change && stat.change > 0
         return (
           <Card key={stat.title} className="p-6 h-[180px] flex flex-col">
             <div className="flex flex-col h-full">
@@ -171,21 +86,23 @@ export const DashboardStats = memo(function DashboardStats({ userId }: Dashboard
                 <h3 className="text-sm font-medium text-muted-foreground">{stat.title}</h3>
                 <div className="text-3xl font-bold">{formatCurrency(stat.value)}</div>
                 <div className="flex items-center gap-2 text-sm">
-                  <div className={cn(
-                    'flex items-center gap-1',
-                    isPositive ? 'text-emerald-600' : 'text-red-600'
-                  )}>
-                    {isPositive ? (
-                      <ArrowUpIcon className="h-4 w-4" />
-                    ) : (
-                      <ArrowDownIcon className="h-4 w-4" />
-                    )}
-                    <span className="font-medium">{Math.abs(stat.change)}%</span>
-                  </div>
+                  {stat.change !== undefined && (
+                    <div className={cn(
+                      'flex items-center gap-1',
+                      isPositive ? 'text-emerald-600' : 'text-red-600'
+                    )}>
+                      {isPositive ? (
+                        <ArrowUpIcon className="h-4 w-4" />
+                      ) : (
+                        <ArrowDownIcon className="h-4 w-4" />
+                      )}
+                      <span className="font-medium">{Math.abs(stat.change)}%</span>
+                    </div>
+                  )}
                   <span className="text-muted-foreground">Mes anterior {stat.lastMonth}</span>
                 </div>
               </div>
-              <MiniChart heights={miniChartData} isPositive={isPositive} />
+              <MiniChart heights={miniChartData} isPositive={!!isPositive} />
             </div>
           </Card>
         )

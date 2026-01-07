@@ -38,13 +38,12 @@ describe('DashboardStats Component', () => {
   })
 
   it('renders without crashing', () => {
-    render(<DashboardStats userId="test-user" />)
+    render(<DashboardStats stats={{ income: 1000, expenses: 500, balance: 500, net: 500, balanceChange: 0, incomeChange: 0, expensesChange: 0, netChange: 0 }} />)
     expect(document.body).toBeInTheDocument()
   })
 
   it('displays component structure', () => {
-    const { container } = render(<DashboardStats userId="test-user" />)
-    
+    const { container } = render(<DashboardStats stats={{ income: 1000, expenses: 500, balance: 500, net: 500, balanceChange: 0, incomeChange: 0, expensesChange: 0, netChange: 0 }} />)
     // The component should render without errors
     expect(container.firstChild).toBeTruthy()
   })
