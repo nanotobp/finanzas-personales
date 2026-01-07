@@ -47,13 +47,19 @@ export function ReportsView() {
             .lte('date', endDate)
 
           // Facturas cobradas
-          const { data: invoices } = await supabase
+          const { data: invoices, error: invoicesError } = await supabase
             .from('invoices')
-            .select('amount')
+            .select('amount, paid_date')
             .eq('status', 'paid')
             .not('paid_date', 'is', null)
             .gte('paid_date', startDate)
             .lte('paid_date', endDate)
+
+          // Debug: mostrar facturas encontradas
+          if (month === new Date().toISOString().slice(0, 7)) {
+            console.log(`📊 Facturas en ${month}:`, invoices?.length || 0, invoices)
+            if (invoicesError) console.error('Error facturas:', invoicesError)
+          }
 
           // Gastos
           const { data: expenses } = await supabase
@@ -66,6 +72,16 @@ export function ReportsView() {
           const totalIncome = (income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0)
             + (invoices?.reduce((sum, i) => sum + Number(i.amount), 0) || 0)
           const totalExpenses = expenses?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
+
+          // Debug: mostrar totales del mes actual
+          if (month === new Date().toISOString().slice(0, 7)) {
+            const incomeFromTransactions = income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
+            const incomeFromInvoices = invoices?.reduce((sum, i) => sum + Number(i.amount), 0) || 0
+            console.log(`💰 Ingresos ${month}:`)
+            console.log(`  - Transacciones: Gs. ${incomeFromTransactions.toLocaleString('es-PY')}`)
+            console.log(`  - Facturas: Gs. ${incomeFromInvoices.toLocaleString('es-PY')}`)
+            console.log(`  - TOTAL: Gs. ${totalIncome.toLocaleString('es-PY')}`)
+          }
 
           return {
             month,
