@@ -30,6 +30,15 @@ const MiniChart = memo(({ heights, isPositive }: { heights: number[], isPositive
 MiniChart.displayName = 'MiniChart'
 
 export const DashboardStats = memo(function DashboardStats({ userId }: DashboardStatsProps) {
+      // Logs de depuración en el cliente
+      import { useEffect } from 'react'
+      useEffect(() => {
+        if (typeof window !== 'undefined') {
+          console.log('DashboardStats userId:', userId)
+          // El valor de stats puede ser undefined al inicio
+          console.log('DashboardStats stats:', stats)
+        }
+      }, [userId, stats])
     // DEBUG: log userId y stats
     if (typeof window !== 'undefined') {
       console.log('DashboardStats userId:', userId)
