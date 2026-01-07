@@ -21,7 +21,7 @@ export function TaxSummary() {
       const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
         .toISOString().slice(0, 10)
 
-      // Obtener transacciones e invoices del mes
+      // Obtener transacciones del mes e TODAS las facturas pagadas
       const [transactionsResult, invoicesResult, settingsResult] = await Promise.all([
         supabase
           .from('transactions')
@@ -33,9 +33,8 @@ export function TaxSummary() {
           .from('invoices')
           .select('amount, iva_amount, irp_withheld, subtotal')
           .eq('user_id', user.id)
-          .gte('paid_date', startDate)
-          .lte('paid_date', endDate)
-          .eq('status', 'paid'),
+          .eq('status', 'paid')
+          .not('paid_date', 'is', null),
         supabase
           .from('tax_settings')
           .select('*')
@@ -94,7 +93,7 @@ export function TaxSummary() {
   return (
     <div className="space-y-4">
       <div className="mb-2 text-xs text-muted-foreground">
-        <strong>Nota:</strong> Los cálculos incluyen automáticamente todas las facturas pagadas este mes. El IVA e IRP se calculan según los porcentajes configurados en cada factura.
+        <strong>Nota:</strong> IVA Ventas incluye TODAS las facturas pagadas. IVA Compras incluye transacciones del mes actual. Los cálculos usan los porcentajes configurados en cada factura.
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
