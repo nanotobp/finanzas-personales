@@ -115,7 +115,7 @@ function DashboardDesktop() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground mt-1">
-              Bienvenido de vuelta, {userData?.user?.email?.split('@')[0] || 'Usuario'}
+              Bienvenido de vuelta, {userData?.user?.user_metadata?.full_name || userData?.user?.user_metadata?.name || userData?.user?.email?.split('@')[0] || 'Usuario'}
             </p>
           </div>
           <div className="text-right">
