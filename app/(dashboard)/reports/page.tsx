@@ -1,4 +1,19 @@
-import { ReportsView } from '@/components/reports/reports-view'
+import dynamic from 'next/dynamic'
+import { Skeleton } from '@/components/ui/skeleton'
+
+// Lazy loading con suspense para optimizar bundle
+const ReportsView = dynamic(
+  () => import('@/components/reports/reports-view').then(mod => ({ default: mod.ReportsView })),
+  {
+    loading: () => (
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+    ),
+    ssr: false
+  }
+)
 
 export default function ReportsPage() {
   return (

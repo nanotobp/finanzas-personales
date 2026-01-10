@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,7 +29,7 @@ interface FinancialRecommendation {
   priority: number
 }
 
-export function FinancialRecommendationsAdvanced() {
+export const FinancialRecommendationsAdvanced = memo(function FinancialRecommendationsAdvanced() {
   const supabase = createClient()
 
   const { data: recommendations, isLoading } = useQuery({

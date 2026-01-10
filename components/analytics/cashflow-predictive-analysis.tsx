@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,7 +33,7 @@ interface Insight {
   impact: number
 }
 
-export function CashflowPredictiveAnalysis() {
+export const CashflowPredictiveAnalysis = memo(function CashflowPredictiveAnalysis() {
   const supabase = createClient()
 
   const { data, isLoading } = useQuery({

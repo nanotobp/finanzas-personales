@@ -51,7 +51,7 @@ interface AmortizationRow {
   balance: number
 }
 
-export function FinancialCalculator() {
+export const FinancialCalculator = memo(function FinancialCalculator() {
   const supabase = createClient()
   
   // Estados del formulario
@@ -91,51 +91,40 @@ export function FinancialCalculator() {
         const currentMonthEnd = getMonthEndDate(currentMonth)
         const lastMonthEnd = getMonthEndDate(lastMonthStr)
 
-        // Balance total de cuentas
-        const { data: accounts, error: accountsError } = await supabase
-          .from('accounts')
-          .select('balance')
-          .eq('user_id', userData.id)
+        // Optimización: Obtener todos los datos en paralelo con Promise.all
+        const [
+          { data: accounts, error: accountsError },
+          { data: currentIncome, error: incomeError },
+          { data: paidInvoices, error: invoicesError },
+          { data: currentExpenses, error: expensesError }
+        ] = await Promise.all([
+          supabase.from('accounts').select('balance').eq('user_id', userData.id),
+          supabase.from('transactions').select('amount').eq('user_id', userData.id).eq('type', 'income').gte('date', `${currentMonth}-01`).lte('date', currentMonthEnd),
+          supabase.from('invoices').select('amount').eq('user_id', userData.id).eq('status', 'paid').gte('paid_date', `${currentMonth}-01`).lte('paid_date', currentMonthEnd).not('paid_date', 'is', null),
+          supabase.from('transactions').select('amount').eq('user_id', userData.id).eq('type', 'expense').gte('date', `${currentMonth}-01`).lte('date', currentMonthEnd)
+        ])
 
         if (accountsError) {
           console.error('Error fetching accounts:', accountsError)
           throw accountsError
         }
 
-        const totalAccountsBalance = accounts?.reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0
-
-        // Ingresos del mes actual
-        const { data: currentIncome, error: incomeError } = await supabase
-          .from('transactions')
-          .select('amount')
-          .eq('user_id', userData.id)
-          .eq('type', 'income')
-          .gte('date', `${currentMonth}-01`)
-          .lte('date', currentMonthEnd)
-
         if (incomeError) {
           console.error('Error fetching income:', incomeError)
           throw incomeError
         }
-
-        const { data: paidInvoices, error: invoicesError } = await supabase
-          .from('invoices')
-          .select('amount')
-          .eq('user_id', userData.id)
-          .eq('status', 'paid')
-          .gte('paid_date', `${currentMonth}-01`)
-          .lte('paid_date', currentMonthEnd)
-          .not('paid_date', 'is', null)
 
         if (invoicesError) {
           console.error('Error fetching invoices:', invoicesError)
           throw invoicesError
         }
 
-        // Si no hay ingresos este mes, buscar en el mes anterior
-        let monthlyIncome = 
-          (currentIncome?.reduce((sum, t) => sum + t.amount, 0) || 0) +
-          (paidInvoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0)
+        if (expensesError) {
+          console.error('Error fetching expenses:', expensesError)
+          throw expensesError
+        }
+
+        const totalAccountsBalance = accounts?.reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0
 
         if (monthlyIncome === 0) {
           console.log('No income for current month, trying last month...')
