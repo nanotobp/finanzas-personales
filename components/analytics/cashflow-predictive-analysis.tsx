@@ -41,15 +41,15 @@ export function CashflowPredictiveAnalysis() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return null
 
-      // Obtener transacciones de los últimos 6 meses para análisis
-      const sixMonthsAgo = new Date()
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+      // Obtener transacciones de los últimos 2 meses para análisis
+      const twoMonthsAgo = new Date()
+      twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
 
       const { data: transactions } = await supabase
         .from('transactions')
         .select('amount, type, date')
         .eq('user_id', user.id)
-        .gte('date', sixMonthsAgo.toISOString())
+        .gte('date', twoMonthsAgo.toISOString())
         .order('date', { ascending: true })
 
       if (!transactions || transactions.length === 0) {
