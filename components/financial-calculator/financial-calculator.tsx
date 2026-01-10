@@ -240,7 +240,7 @@ export function FinancialCalculator() {
   const getRecommendations = () => {
     if (!financialData) return []
 
-    const recommendations: { type: 'success' | 'warning' | 'error', message: string }[] = []
+    const recommendations: { type: 'success' | 'warning' | 'error' | 'info', message: string }[] = []
     const purchaseAmount = parseFloat(amount)
     const downPmt = parseFloat(downPayment || '0')
     
@@ -485,7 +485,7 @@ export function FinancialCalculator() {
           {/* Modo de compra */}
           <div className="space-y-3">
             <Label>Tipo de Compra</Label>
-            <RadioGroup value={purchaseMode} onValueChange={(v) => setPurchaseMode(v as PurchaseMode)}>
+            <RadioGroup value={purchaseMode} onValueChange={(v: string) => setPurchaseMode(v as PurchaseMode)}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="financing" id="financing" />
                 <Label htmlFor="financing" className="flex items-center gap-2 cursor-pointer">
