@@ -114,31 +114,30 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Desktop Sidebar - Con texto y secciones colapsables */}
+      {/* Desktop Sidebar */}
       <div className={cn(
-        "fixed top-0 left-0 bottom-0 z-50 flex-col hidden md:flex bg-gradient-to-b border-r border-white/10 transition-all duration-300",
-        gradient,
+        "fixed top-0 left-0 bottom-0 z-50 flex-col hidden md:flex border-r transition-all duration-300",
+        "bg-card",
         isCollapsed ? "w-20" : "w-64"
       )}>
         {/* Logo */}
-        <div className="flex h-[88px] items-center justify-between px-4 border-b border-white/10">
+        <div className="flex h-16 items-center justify-between px-4 border-b">
           {!isCollapsed ? (
             <>
               <Link href="/dashboard" className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-                  <TrendingUp className="h-5 w-5 text-white" />
+                <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <span className="text-xl font-bold text-white">Finanzas</span>
+                <span className="text-lg font-semibold">Finanzas</span>
               </Link>
               
-              {/* Collapse Button */}
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={toggleCollapsed}
-                className="h-8 w-8 text-white hover:bg-white/10 rounded-full flex-shrink-0"
+                className="h-8 w-8 flex-shrink-0"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
             </>
           ) : (
@@ -146,9 +145,9 @@ export function Sidebar() {
               variant="ghost"
               size="icon"
               onClick={toggleCollapsed}
-              className="h-8 w-8 text-white hover:bg-white/10 rounded-full flex-shrink-0 mx-auto"
+              className="h-8 w-8 mx-auto"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           )}
         </div>
@@ -161,23 +160,21 @@ export function Sidebar() {
               
               return (
                 <div key={section.title} className="mb-2">
-                  {/* Section Header - Ocultar cuando sidebar está colapsado */}
                   {!isCollapsed && (
                     <button
                       onClick={() => toggleSection(section.title)}
-                      className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-white/60 uppercase tracking-wider hover:text-white/80 transition-colors"
+                      className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                     >
                       <span>{section.title}</span>
                       <ChevronDown
                         className={cn(
-                          'h-4 w-4 transition-transform',
+                          'h-3.5 w-3.5 transition-transform',
                           isSectionCollapsed && 'transform rotate-180'
                         )}
                       />
                     </button>
                   )}
 
-                  {/* Section Items */}
                   {!isCollapsed && !isSectionCollapsed && (
                     <div className="flex flex-col gap-0.5 mt-1">
                       {section.items.map((item) => {
@@ -187,11 +184,13 @@ export function Sidebar() {
                             key={item.href}
                             href={item.href}
                             className={cn(
-                              'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-all',
-                              isActive && 'bg-white/20 text-white shadow-lg'
+                              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+                              isActive 
+                                ? 'bg-primary text-primary-foreground shadow-sm' 
+                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                             )}
                           >
-                            <item.icon className="h-5 w-5 flex-shrink-0" />
+                            <item.icon className="h-4 w-4 flex-shrink-0" />
                             <span className="truncate">{item.name}</span>
                           </Link>
                         )
@@ -199,7 +198,6 @@ export function Sidebar() {
                     </div>
                   )}
                   
-                  {/* Collapsed View - Only Icons */}
                   {isCollapsed && (
                     <div className="flex flex-col gap-1 mt-1">
                       {section.items.map((item) => {
@@ -210,11 +208,13 @@ export function Sidebar() {
                             href={item.href}
                             title={item.name}
                             className={cn(
-                              'flex items-center justify-center rounded-lg p-2.5 text-white/70 hover:bg-white/10 hover:text-white transition-all mx-2',
-                              isActive && 'bg-white/20 text-white shadow-lg'
+                              'flex items-center justify-center rounded-lg p-2 transition-all mx-2',
+                              isActive 
+                                ? 'bg-primary text-primary-foreground shadow-sm' 
+                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                             )}
                           >
-                            <item.icon className="h-5 w-5" />
+                            <item.icon className="h-4 w-4" />
                           </Link>
                         )
                       })}
@@ -228,10 +228,7 @@ export function Sidebar() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className={cn(
-        "fixed inset-x-0 bottom-0 z-50 flex h-16 md:hidden rounded-t-3xl shadow-2xl border-t border-white/10 bg-gradient-to-r",
-        gradient
-      )}>
+      <div className="fixed inset-x-0 bottom-0 z-50 flex h-16 md:hidden border-t bg-card">
         <nav className="flex flex-row items-center justify-around w-full px-2">
           {navigationSections[0].items.slice(0, 2).map((item) => {
             const isActive = pathname === item.href
@@ -240,8 +237,10 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex flex-col items-center justify-center rounded-xl p-2 text-white/70 hover:bg-white/10 hover:text-white transition-colors min-w-[60px]',
-                  isActive && 'bg-white/20 text-white'
+                  'flex flex-col items-center justify-center rounded-lg p-2 transition-colors min-w-[60px]',
+                  isActive 
+                    ? 'bg-primary/10 text-primary' 
+                    : 'text-muted-foreground hover:bg-accent'
                 )}
               >
                 <item.icon className="h-5 w-5 mb-1" />
@@ -256,8 +255,10 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex flex-col items-center justify-center rounded-xl p-2 text-white/70 hover:bg-white/10 hover:text-white transition-colors min-w-[60px]',
-                  isActive && 'bg-white/20 text-white'
+                  'flex flex-col items-center justify-center rounded-lg p-2 transition-colors min-w-[60px]',
+                  isActive 
+                    ? 'bg-primary/10 text-primary' 
+                    : 'text-muted-foreground hover:bg-accent'
                 )}
               >
                 <item.icon className="h-5 w-5 mb-1" />

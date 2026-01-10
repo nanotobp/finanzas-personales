@@ -56,7 +56,8 @@ export function SmartAlerts() {
               title: 'Presupuesto Excedido',
               description: `Has gastado ${percentage.toFixed(1)}% del presupuesto de ${budget.categories?.name}`,
               actionRequired: true,
-              percentage
+              percentage,
+              amount: spent
             })
           } else if (percentage > 85) {
             alerts.push({
@@ -66,7 +67,8 @@ export function SmartAlerts() {
               title: 'Presupuesto Casi Agotado',
               description: `Has gastado ${percentage.toFixed(1)}% del presupuesto de ${budget.categories?.name}`,
               actionRequired: false,
-              percentage
+              percentage,
+              amount: spent
             })
           }
         }
@@ -106,7 +108,7 @@ export function SmartAlerts() {
                 type: daysLeft < 90 ? 'critical' : 'warning',
                 category: 'goal',
                 title: 'Objetivo de Ahorro en Riesgo',
-                description: `Para alcanzar "${goal.name}" necesitas ahorrar Gs ${requiredMonthlyAmount.toLocaleString()} mensualmente`,
+                description: `Para alcanzar "${goal.name}" necesitas ahorrar Gs. ${Math.round(requiredMonthlyAmount).toLocaleString('es-PY')} mensualmente`,
                 actionRequired: true,
                 daysUntilCritical: daysLeft,
                 amount: requiredMonthlyAmount
@@ -177,7 +179,7 @@ export function SmartAlerts() {
             type: 'info',
             category: 'opportunity',
             title: 'Oportunidad de Ahorro',
-            description: `Tu mayor gasto este mes fue en ${highestCategory[0]} (Gs ${highestCategory[1].toLocaleString()}). ¿Podrías reducirlo un 10%?`,
+            description: `Tu mayor gasto este mes fue en ${highestCategory[0]} (Gs. ${Math.round(highestCategory[1]).toLocaleString('es-PY')}). ¿Podrías reducirlo un 10%?`,
             actionRequired: false,
             amount: highestCategory[1] * 0.1
           })
@@ -276,7 +278,7 @@ export function SmartAlerts() {
                     </div>
                     {alert.amount && (
                       <div className="text-right text-sm font-mono">
-                        ${alert.amount.toLocaleString()}
+                        Gs. {Math.round(alert.amount).toLocaleString('es-PY')}
                       </div>
                     )}
                     {alert.percentage && (

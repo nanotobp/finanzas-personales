@@ -69,17 +69,9 @@ export default function LoginForm() {
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
+      <div>
         <Button type="submit" disabled={loading} className="w-full">
           {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.push('/signup')}
-          className="w-full"
-        >
-          Crear cuenta
         </Button>
       </div>
     </form>

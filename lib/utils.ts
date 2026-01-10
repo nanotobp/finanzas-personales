@@ -1,32 +1,29 @@
-import { type ClassValue, clsx } from "clsx"
+import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatCurrency(amount: number, currency = 'PYG') {
-  if (currency === 'PYG') {
-    return `Gs. ${Math.round(amount).toLocaleString('es-PY')}`
-  }
+// Formatear moneda en guaraníes
+export function formatCurrency(amount: number | string): string {
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+  
+  if (isNaN(numAmount)) return '₲ 0'
+  
   return new Intl.NumberFormat('es-PY', {
     style: 'currency',
-    currency: currency,
-  }).format(amount)
+    currency: 'PYG',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(numAmount)
 }
 
-export function formatDate(date: Date | string) {
-  return new Date(date).toLocaleDateString('es-PY', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
-
-export function formatShortDate(date: Date | string) {
-  return new Date(date).toLocaleDateString('es-PY', {
-    year: 'numeric',
-    month: '2-digit',
+// Formatear fecha corta
+export function formatShortDate(date: string | Date): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date
+  return new Intl.DateTimeFormat('es-PY', {
     day: '2-digit',
-  })
+    month: 'short',
+  }).format(dateObj)
 }

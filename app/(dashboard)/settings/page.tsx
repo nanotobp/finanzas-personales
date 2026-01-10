@@ -5,7 +5,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Pencil, Trash2, Palette } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { 
+  Plus, 
+  Pencil, 
+  Trash2, 
+  Palette, 
+  Tag,
+  TrendingDown,
+  TrendingUp,
+  Settings as SettingsIcon,
+  Sparkles
+} from 'lucide-react'
 import { CategoryFormDialog } from '@/components/categories/category-form-dialog'
 import { useSidebarPreferences, colorGradients } from '@/hooks/use-sidebar-preferences'
 import { cn } from '@/lib/utils'
@@ -92,16 +103,20 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Configuración</h1>
-          <p className="text-gray-600 mt-1">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <SettingsIcon className="h-8 w-8" />
+            Configuración
+          </h1>
+          <p className="text-muted-foreground">
             Personaliza tu experiencia y administra tus categorías
           </p>
         </div>
-        <Button onClick={handleNew}>
-          <Plus className="h-4 w-4 mr-2" />
+        <Button onClick={handleNew} size="default" className="gap-2">
+          <Plus className="h-4 w-4" />
           Nueva Categoría
         </Button>
       </div>
@@ -110,7 +125,7 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
+            <Palette className="h-5 w-5 text-primary" />
             Tema del Sidebar
           </CardTitle>
           <CardDescription>
@@ -124,7 +139,7 @@ export default function SettingsPage() {
                 key={option.value}
                 onClick={() => setColor(option.value)}
                 className={cn(
-                  "flex flex-col items-center gap-3 p-4 rounded-lg border-2 transition-all hover:scale-105",
+                  "group relative flex flex-col items-center gap-3 p-4 rounded-lg border-2 transition-all hover:scale-105",
                   color === option.value
                     ? "border-primary shadow-lg"
                     : "border-border hover:border-primary/50"
@@ -132,57 +147,78 @@ export default function SettingsPage() {
               >
                 <div
                   className={cn(
-                    "h-16 w-full rounded-md bg-gradient-to-r shadow-md",
+                    "h-16 w-full rounded-md bg-gradient-to-r shadow-md transition-transform group-hover:scale-105",
                     option.gradient
                   )}
                 />
                 <span className="text-sm font-medium">{option.name}</span>
+                {color === option.value && (
+                  <Badge variant="default" className="absolute -top-2 -right-2">
+                    <Sparkles className="h-3 w-3" />
+                  </Badge>
+                )}
               </button>
             ))}
           </div>
         </CardContent>
       </Card>
 
+      {/* Categorías de Gastos */}
       <Card>
         <CardHeader>
-          <CardTitle>Categorías de Gastos</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingDown className="h-5 w-5 text-rose-600" />
+            Categorías de Gastos
+          </CardTitle>
+          <CardDescription>
+            Administra las categorías para tus gastos
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loadingExpenses ? (
-            <div className="text-center py-8 text-gray-500">Cargando...</div>
+            <div className="text-center py-8 text-muted-foreground">Cargando...</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {expenseCategories.map((category: any) => (
                 <div
                   key={category.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="group flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition-all"
                   style={{ borderLeft: `4px solid ${category.color}` }}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{category.icon}</span>
-                    <span className="font-medium">{category.name}</span>
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div 
+                      className="flex items-center justify-center h-10 w-10 rounded-full text-xl"
+                      style={{ backgroundColor: category.color + '20' }}
+                    >
+                      {category.icon}
+                    </div>
+                    <span className="font-medium truncate">{category.name}</span>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
+                      className="h-8 w-8"
                       onClick={() => handleEdit(category)}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
+                      className="h-8 w-8"
                       onClick={() => handleDelete(category.id)}
                     >
-                      <Trash2 className="h-4 w-4 text-red-500" />
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
                 </div>
               ))}
               {expenseCategories.length === 0 && (
-                <div className="col-span-full text-center py-8 text-gray-500">
-                  No hay categorías de gastos
+                <div className="col-span-full text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <Tag className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No hay categorías de gastos</p>
+                  <p className="text-sm mt-1">Crea una nueva categoría para empezar</p>
                 </div>
               )}
             </div>
@@ -190,46 +226,62 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Categorías de Ingresos */}
       <Card>
         <CardHeader>
-          <CardTitle>Categorías de Ingresos</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-emerald-600" />
+            Categorías de Ingresos
+          </CardTitle>
+          <CardDescription>
+            Administra las categorías para tus ingresos
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loadingIncome ? (
-            <div className="text-center py-8 text-gray-500">Cargando...</div>
+            <div className="text-center py-8 text-muted-foreground">Cargando...</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {incomeCategories.map((category: any) => (
                 <div
                   key={category.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="group flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition-all"
                   style={{ borderLeft: `4px solid ${category.color}` }}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{category.icon}</span>
-                    <span className="font-medium">{category.name}</span>
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div 
+                      className="flex items-center justify-center h-10 w-10 rounded-full text-xl"
+                      style={{ backgroundColor: category.color + '20' }}
+                    >
+                      {category.icon}
+                    </div>
+                    <span className="font-medium truncate">{category.name}</span>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
+                      className="h-8 w-8"
                       onClick={() => handleEdit(category)}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
+                      className="h-8 w-8"
                       onClick={() => handleDelete(category.id)}
                     >
-                      <Trash2 className="h-4 w-4 text-red-500" />
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
                 </div>
               ))}
               {incomeCategories.length === 0 && (
-                <div className="col-span-full text-center py-8 text-gray-500">
-                  No hay categorías de ingresos
+                <div className="col-span-full text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <Tag className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No hay categorías de ingresos</p>
+                  <p className="text-sm mt-1">Crea una nueva categoría para empezar</p>
                 </div>
               )}
             </div>

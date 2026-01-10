@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { DashboardLayoutClean } from '@/components/dashboard/dashboard-layout-clean'
 import { DashboardLayoutClient } from '@/components/dashboard/dashboard-layout-client'
+import { DashboardLayoutSelector } from '@/components/dashboard/dashboard-layout-selector'
 
 export default async function DashboardLayout({
   children,
@@ -15,8 +17,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <DashboardLayoutClient user={user}>
+    <DashboardLayoutSelector user={user}>
       {children}
-    </DashboardLayoutClient>
+    </DashboardLayoutSelector>
   )
 }

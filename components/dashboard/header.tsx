@@ -181,23 +181,25 @@ export function Header({ user }: HeaderProps) {
 
   return (
     <header className={cn(
-      "fixed top-0 left-0 right-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b transition-all duration-300",
+      "fixed top-0 left-0 right-0 z-40 border-b transition-all duration-300",
+      "bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl",
+      "supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/60",
       isCollapsed ? "md:left-20" : "md:left-64"
     )}>
-      <div className="flex h-[88px] items-center px-4 sm:px-6 lg:px-8">
+      <div className="flex h-16 items-center px-4 sm:px-6 lg:px-8 gap-4">
         <div className="flex flex-1 items-center justify-between gap-4">
-          {/* Search Bar - Búsqueda con Enter */}
+          {/* Search Bar */}
           <Popover open={searchOpen} onOpenChange={setSearchOpen}>
             <PopoverTrigger asChild>
               <div className="flex-1 max-w-md relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary z-10" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                 <Input
                   type="search"
-                  placeholder="Buscar transacciones, cuentas... (Enter para buscar)"
+                  placeholder="Buscar... (Enter para buscar)"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
-                  className="w-full pl-9 pr-4 bg-card border-0 shadow-sm rounded-full h-11 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-primary"
+                  className="w-full pl-10 pr-4 bg-muted/50 border-0 rounded-lg h-10 focus-visible:ring-2 focus-visible:ring-primary/20"
                 />
               </div>
             </PopoverTrigger>
@@ -266,56 +268,60 @@ export function Header({ user }: HeaderProps) {
           </Popover>
 
           {/* Right Side Actions */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {/* Theme Toggle */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="rounded-full"
+              className="rounded-lg h-9 w-9"
             >
-              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
               <span className="sr-only">Cambiar tema</span>
             </Button>
 
             {/* Notifications */}
-            <Button variant="ghost" size="icon" className="rounded-full relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+            <Button variant="ghost" size="icon" className="rounded-lg h-9 w-9 relative">
+              <Bell className="h-4 w-4" />
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-primary rounded-full"></span>
             </Button>
 
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2 rounded-full px-2 sm:px-3">
+                <Button variant="ghost" className="gap-2 rounded-lg px-2 h-9">
                   <div className={cn(
-                    "h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-r",
+                    "h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br",
                     gradient
                   )}>
-                    <User className="h-4 w-4 text-white" />
+                    <User className="h-3.5 w-3.5 text-white" />
                   </div>
-                  <span className="font-medium hidden lg:inline truncate max-w-[120px]">
+                  <span className="font-medium hidden lg:inline truncate max-w-[120px] text-sm">
                     Giovanni Patrón
                   </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">Giovanni Patrón</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => router.push('/settings')}>
                   <User className="mr-2 h-4 w-4" />
                   Perfil
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  // Recargar la página para actualizar datos
-                  window.location.reload()
-                }}>
+                <DropdownMenuItem onClick={() => window.location.reload()}>
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Actualizar datos
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   Cerrar Sesión
                 </DropdownMenuItem>
