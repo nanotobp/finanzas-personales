@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { formatCurrency, formatShortDate } from '@/lib/utils'
+import { formatCurrency, formatShortDate, getMonthEndDate } from '@/lib/utils'
 import { Search, Plus, Pencil, Trash2, FileText } from 'lucide-react'
 import { IncomeFormDialog } from './income-form-dialog'
 
@@ -36,9 +36,8 @@ export function IncomeList() {
   const { data: paidInvoices, isLoading: loadingInvoices } = useQuery({
     queryKey: ['paid-invoices', monthFilter],
     queryFn: async () => {
-      const [year, month] = monthFilter.split('-')
       const startDate = `${monthFilter}-01`
-      const endDate = new Date(Number(year), Number(month), 0).toISOString().split('T')[0]
+      const endDate = getMonthEndDate(monthFilter)
 
       const { data } = await supabase
         .from('invoices')
@@ -58,9 +57,8 @@ export function IncomeList() {
   const { data: otherIncome, isLoading: loadingOther } = useQuery({
     queryKey: ['other-income', monthFilter],
     queryFn: async () => {
-      const [year, month] = monthFilter.split('-')
       const startDate = `${monthFilter}-01`
-      const endDate = new Date(Number(year), Number(month), 0).toISOString().split('T')[0]
+      const endDate = getMonthEndDate(monthFilter)
 
       const { data } = await supabase
         .from('transactions')

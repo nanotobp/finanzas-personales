@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getMonthEndDate } from '@/lib/utils'
 import { Activity, TrendingUp, TrendingDown, PiggyBank, LogOut, AlertTriangle, DollarSign } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -20,12 +20,10 @@ export default function ProfilePage() {
     queryKey: ['financial-health-profile', currentMonth],
     queryFn: async () => {
       const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const endDate = getMonthEndDate(currentMonth)
 
       const lastMonthStart = `${lastMonth}-01`
-      const lastMonthEnd = new Date(new Date(lastMonthStart).getFullYear(), new Date(lastMonthStart).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const lastMonthEnd = getMonthEndDate(lastMonth)
 
       const [accountsRes, transactionsRes, lastMonthTransactionsRes, budgetsRes] = await Promise.all([
         supabase.from('accounts').select('balance').eq('is_active', true),

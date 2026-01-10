@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getMonthEndDate } from '@/lib/utils'
 import { 
   ChevronRight, 
   Home as HomeIcon, 
@@ -26,8 +26,7 @@ function QuickStats() {
     queryKey: ['quick-stats', currentMonth],
     queryFn: async () => {
       const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const endDate = getMonthEndDate(currentMonth)
 
       const { data: transactions } = await supabase
         .from('transactions')
@@ -119,8 +118,7 @@ export function HomeClean() {
     queryKey: ['home-budgets', currentMonth],
     queryFn: async () => {
       const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const endDate = getMonthEndDate(currentMonth)
 
       const [budgetsRes, expensesRes] = await Promise.all([
         supabase
