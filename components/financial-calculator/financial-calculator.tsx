@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, getMonthEndDate } from '@/lib/utils'
 import {
   Calculator,
