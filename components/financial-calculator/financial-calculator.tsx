@@ -115,9 +115,33 @@ export function FinancialCalculator() {
         .lte('paid_date', currentMonthEnd)
         .not('paid_date', 'is', null)
 
-      const monthlyIncome = 
+      // Si no hay ingresos este mes, buscar en el mes anterior
+      let monthlyIncome = 
         (currentIncome?.reduce((sum, t) => sum + t.amount, 0) || 0) +
         (paidInvoices?.reduce((sum, inv) => sum + inv.total, 0) || 0)
+
+      if (monthlyIncome === 0) {
+        const { data: lastIncome } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('user_id', userData.id)
+          .eq('type', 'income')
+          .gte('date', `${lastMonthStr}-01`)
+          .lte('date', lastMonthEnd)
+
+        const { data: lastPaidInvoices } = await supabase
+          .from('invoices')
+          .select('total')
+          .eq('user_id', userData.id)
+          .eq('status', 'paid')
+          .gte('paid_date', `${lastMonthStr}-01`)
+          .lte('paid_date', lastMonthEnd)
+          .not('paid_date', 'is', null)
+
+        monthlyIncome = 
+          (lastIncome?.reduce((sum, t) => sum + t.amount, 0) || 0) +
+          (lastPaidInvoices?.reduce((sum, inv) => sum + inv.total, 0) || 0)
+      }
 
       // Gastos del mes actual
       const { data: currentExpenses } = await supabase
@@ -128,7 +152,20 @@ export function FinancialCalculator() {
         .gte('date', `${currentMonth}-01`)
         .lte('date', currentMonthEnd)
 
-      const monthlyExpenses = currentExpenses?.reduce((sum, t) => sum + t.amount, 0) || 0
+      let monthlyExpenses = currentExpenses?.reduce((sum, t) => sum + t.amount, 0) || 0
+
+      // Si no hay gastos este mes, buscar en el mes anterior
+      if (monthlyExpenses === 0) {
+        const { data: lastExpenses } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('user_id', userData.id)
+          .eq('type', 'expense')
+          .gte('date', `${lastMonthStr}-01`)
+          .lte('date', lastMonthEnd)
+
+        monthlyExpenses = lastExpenses?.reduce((sum, t) => sum + t.amount, 0) || 0
+      }
 
       // Presupuestos
       const { data: budgets } = await supabase
@@ -296,12 +333,25 @@ export function FinancialCalculator() {
         : 0
       const remainingAfterPayment = disposableIncome - monthlyPayment
 
-      // Validar si no hay ingresos registrados
+      // Validar si no hay ingresos registrados (ni en mes actual ni anterior)
       if (financialData.monthlyIncome === 0) {
         recommendations.push({
-          type: 'error',
-          message: `No tienes ingresos registrados este mes. Registra tus ingresos para obtener un análisis preciso.`
+          type: 'warning',
+          message: `No tienes ingresos registrados en los últimos 2 meses. El análisis se basa en tu balance actual (${formatCurrency(financialData.balance)}).`
         })
+        
+        // Analizar solo basado en balance
+        if (downPmt > financialData.balance) {
+          recommendations.push({
+            type: 'error',
+            message: `No puedes cubrir la cuota inicial de ${formatCurrency(downPmt)}. Tienes ${formatCurrency(financialData.balance)}.`
+          })
+        } else {
+          recommendations.push({
+            type: 'info',
+            message: `Registra tus ingresos mensuales para obtener un análisis más preciso de capacidad de pago.`
+          })
+        }
         return recommendations
       }
 
