@@ -126,75 +126,51 @@ export const FinancialCalculator = memo(function FinancialCalculator() {
 
         const totalAccountsBalance = accounts?.reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0
 
-        if (monthlyIncome === 0) {
-          console.log('No income for current month, trying last month...')
+        // Si no hay ingresos este mes, buscar en el mes anterior
+        let monthlyIncome = 
+          (currentIncome?.reduce((sum, t) => sum + t.amount, 0) || 0) +
+          (paidInvoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0)
+
+        let monthlyExpenses = currentExpenses?.reduce((sum, t) => sum + t.amount, 0) || 0
+
+        // Si no hay datos del mes actual, obtener del mes anterior (también en paralelo)
+        if (monthlyIncome === 0 || monthlyExpenses === 0) {
+          console.log('No data for current month, trying last month...')
           
-          const { data: lastIncome, error: lastIncomeError } = await supabase
-            .from('transactions')
-            .select('amount')
-            .eq('user_id', userData.id)
-            .eq('type', 'income')
-            .gte('date', `${lastMonthStr}-01`)
-            .lte('date', lastMonthEnd)
+          const [
+            { data: lastIncome, error: lastIncomeError },
+            { data: lastPaidInvoices, error: lastInvoicesError },
+            { data: lastExpenses, error: lastExpensesError }
+          ] = await Promise.all([
+            supabase.from('transactions').select('amount').eq('user_id', userData.id).eq('type', 'income').gte('date', `${lastMonthStr}-01`).lte('date', lastMonthEnd),
+            supabase.from('invoices').select('amount').eq('user_id', userData.id).eq('status', 'paid').gte('paid_date', `${lastMonthStr}-01`).lte('paid_date', lastMonthEnd).not('paid_date', 'is', null),
+            supabase.from('transactions').select('amount').eq('user_id', userData.id).eq('type', 'expense').gte('date', `${lastMonthStr}-01`).lte('date', lastMonthEnd)
+          ])
 
           if (lastIncomeError) {
             console.error('Error fetching last month income:', lastIncomeError)
             throw lastIncomeError
           }
 
-          const { data: lastPaidInvoices, error: lastInvoicesError } = await supabase
-            .from('invoices')
-            .select('amount')
-            .eq('user_id', userData.id)
-            .eq('status', 'paid')
-            .gte('paid_date', `${lastMonthStr}-01`)
-            .lte('paid_date', lastMonthEnd)
-            .not('paid_date', 'is', null)
-
           if (lastInvoicesError) {
             console.error('Error fetching last month invoices:', lastInvoicesError)
             throw lastInvoicesError
           }
-
-          monthlyIncome = 
-            (lastIncome?.reduce((sum, t) => sum + t.amount, 0) || 0) +
-            (lastPaidInvoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0)
-        }
-
-        // Gastos del mes actual
-        const { data: currentExpenses, error: expensesError } = await supabase
-          .from('transactions')
-          .select('amount')
-          .eq('user_id', userData.id)
-          .eq('type', 'expense')
-          .gte('date', `${currentMonth}-01`)
-          .lte('date', currentMonthEnd)
-
-        if (expensesError) {
-          console.error('Error fetching expenses:', expensesError)
-          throw expensesError
-        }
-
-        let monthlyExpenses = currentExpenses?.reduce((sum, t) => sum + t.amount, 0) || 0
-
-        // Si no hay gastos este mes, buscar en el mes anterior
-        if (monthlyExpenses === 0) {
-          console.log('No expenses for current month, trying last month...')
-          
-          const { data: lastExpenses, error: lastExpensesError } = await supabase
-            .from('transactions')
-            .select('amount')
-            .eq('user_id', userData.id)
-            .eq('type', 'expense')
-            .gte('date', `${lastMonthStr}-01`)
-            .lte('date', lastMonthEnd)
 
           if (lastExpensesError) {
             console.error('Error fetching last month expenses:', lastExpensesError)
             throw lastExpensesError
           }
 
-          monthlyExpenses = lastExpenses?.reduce((sum, t) => sum + t.amount, 0) || 0
+          if (monthlyIncome === 0) {
+            monthlyIncome = 
+              (lastIncome?.reduce((sum, t) => sum + t.amount, 0) || 0) +
+              (lastPaidInvoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0)
+          }
+
+          if (monthlyExpenses === 0) {
+            monthlyExpenses = lastExpenses?.reduce((sum, t) => sum + t.amount, 0) || 0
+          }
         }
 
         // Calcular balance neto (disponible después de gastos)
