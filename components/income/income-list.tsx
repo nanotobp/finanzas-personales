@@ -44,6 +44,7 @@ export function IncomeList() {
         .from('invoices')
         .select('*, client:clients(id, name)')
         .eq('status', 'paid')
+        .not('paid_date', 'is', null)
         .gte('paid_date', startDate)
         .lte('paid_date', endDate)
         .order('paid_date', { ascending: false })

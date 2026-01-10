@@ -139,7 +139,10 @@ export function InvoiceFormDialog({ invoice, trigger }: InvoiceFormDialogProps) 
         irp_percentage: irpPercentage,
         // Si due_date está vacío, usar issue_date + 30 días
         due_date: data.due_date || new Date(new Date(data.issue_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        paid_date: data.paid_date || null,
+        // Si el status es 'paid' y no hay paid_date, usar la fecha actual
+        paid_date: data.status === 'paid' 
+          ? (data.paid_date || new Date().toISOString().split('T')[0])
+          : (data.paid_date || null),
         destination_category_id: data.destination_category_id || null,
         notes: data.notes || null,
       }
