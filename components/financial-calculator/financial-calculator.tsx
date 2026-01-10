@@ -291,8 +291,19 @@ export function FinancialCalculator() {
     } else {
       // Análisis para financiamiento
       const disposableIncome = financialData.monthlyIncome - financialData.monthlyExpenses
-      const paymentToIncomeRatio = (monthlyPayment / financialData.monthlyIncome) * 100
+      const paymentToIncomeRatio = financialData.monthlyIncome > 0 
+        ? (monthlyPayment / financialData.monthlyIncome) * 100 
+        : 0
       const remainingAfterPayment = disposableIncome - monthlyPayment
+
+      // Validar si no hay ingresos registrados
+      if (financialData.monthlyIncome === 0) {
+        recommendations.push({
+          type: 'error',
+          message: `No tienes ingresos registrados este mes. Registra tus ingresos para obtener un análisis preciso.`
+        })
+        return recommendations
+      }
 
       if (downPmt > financialData.balance) {
         recommendations.push({
