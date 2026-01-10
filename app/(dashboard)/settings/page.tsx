@@ -31,12 +31,12 @@ export default function SettingsPage() {
   const { toast } = useToast()
 
   const colorOptions = [
-    { name: 'Violeta', value: 'violet', gradient: 'from-violet-600 to-purple-600' },
-    { name: 'Azul', value: 'blue', gradient: 'from-blue-600 to-indigo-600' },
-    { name: 'Verde', value: 'green', gradient: 'from-emerald-600 to-teal-600' },
-    { name: 'Naranja', value: 'orange', gradient: 'from-orange-600 to-red-600' },
-    { name: 'Rosa', value: 'pink', gradient: 'from-pink-600 to-rose-600' },
-    { name: 'Pizarra', value: 'slate', gradient: 'from-slate-700 to-slate-900' },
+    { name: 'Violeta', value: 'violet', from: '#7c3aed', to: '#9333ea' },
+    { name: 'Azul', value: 'blue', from: '#2563eb', to: '#4f46e5' },
+    { name: 'Verde', value: 'green', from: '#059669', to: '#0d9488' },
+    { name: 'Naranja', value: 'orange', from: '#ea580c', to: '#dc2626' },
+    { name: 'Rosa', value: 'pink', from: '#db2777', to: '#e11d48' },
+    { name: 'Pizarra', value: 'slate', from: '#334155', to: '#0f172a' },
   ]
 
   const { data: expenseCategories = [], isLoading: loadingExpenses } = useQuery({
@@ -154,10 +154,10 @@ export default function SettingsPage() {
                 )}
               >
                 <div
-                  className={cn(
-                    "h-16 w-full rounded-md bg-gradient-to-r shadow-md transition-transform group-hover:scale-105",
-                    option.gradient
-                  )}
+                  className="h-16 w-full rounded-md shadow-md transition-transform group-hover:scale-105"
+                  style={{
+                    background: `linear-gradient(to right, ${option.from}, ${option.to})`
+                  }}
                 />
                 <span className="text-sm font-medium">{option.name}</span>
                 {color === option.value && (

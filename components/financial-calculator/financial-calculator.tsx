@@ -34,11 +34,12 @@ type PurchaseMode = 'financing' | 'cash'
 type AmortizationSystem = 'french' | 'german'
 
 interface FinancialData {
-  balance: number
+  balance: number // Balance disponible (ingresos - gastos del mes)
+  accountsBalance: number // Saldo total en cuentas bancarias
   monthlyIncome: number
   monthlyExpenses: number
-  monthlyBudget: number
-  savingsGoals: number
+  savingsRate: number // Porcentaje de ahorro
+  emergencyFundMonths: number // Meses de fondo de emergencia
   healthScore: number
 }
 
@@ -89,13 +90,13 @@ export function FinancialCalculator() {
       const currentMonthEnd = getMonthEndDate(currentMonth)
       const lastMonthEnd = getMonthEndDate(lastMonthStr)
 
-      // Balance total
+      // Balance total de cuentas
       const { data: accounts } = await supabase
         .from('accounts')
         .select('balance')
         .eq('user_id', userData.id)
 
-      const balance = accounts?.reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0
+      const totalAccountsBalance = accounts?.reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0
 
       // Ingresos del mes actual
       const { data: currentIncome } = await supabase
@@ -167,38 +168,39 @@ export function FinancialCalculator() {
         monthlyExpenses = lastExpenses?.reduce((sum, t) => sum + t.amount, 0) || 0
       }
 
-      // Presupuestos
-      const { data: budgets } = await supabase
-        .from('budgets')
-        .select('amount')
-        .eq('user_id', userData.id)
-
-      const monthlyBudget = budgets?.reduce((sum, b) => sum + (b.amount || 0), 0) || 0
-
-      // Objetivos de ahorro
-      const { data: goals } = await supabase
-        .from('savings_goals')
-        .select('target_amount, current_amount')
-        .eq('user_id', userData.id)
-
-      const savingsGoals = goals?.reduce((sum, g) => sum + (g.target_amount - g.current_amount), 0) || 0
-
-      // Calcular score de salud financiera
+      // Calcular balance neto (disponible después de gastos)
+      const netBalance = monthlyIncome - monthlyExpenses
+      
+      // Calcular score de salud financiera mejorado
       const savingsRate = monthlyIncome > 0 ? ((monthlyIncome - monthlyExpenses) / monthlyIncome) * 100 : 0
-      const budgetAdherence = monthlyBudget > 0 ? Math.min((monthlyBudget - monthlyExpenses) / monthlyBudget * 100, 100) : 50
-      const emergencyFund = monthlyExpenses > 0 ? balance / monthlyExpenses : 0
+      const emergencyFundMonths = monthlyExpenses > 0 ? totalAccountsBalance / monthlyExpenses : 0
+      const debtToIncomeRatio = monthlyIncome > 0 ? (monthlyExpenses / monthlyIncome) * 100 : 100
       
       let healthScore = 0
-      healthScore += Math.min(savingsRate * 0.4, 40) // 40% peso
-      healthScore += Math.min(budgetAdherence * 0.3, 30) // 30% peso
-      healthScore += Math.min(emergencyFund * 10, 30) // 30% peso (3 meses = 30 puntos)
+      
+      // 1. Tasa de ahorro (40 puntos): 20%+ = excelente
+      if (savingsRate >= 20) healthScore += 40
+      else if (savingsRate >= 10) healthScore += 30
+      else if (savingsRate >= 5) healthScore += 20
+      else if (savingsRate > 0) healthScore += 10
+      
+      // 2. Fondo de emergencia (30 puntos): 6+ meses = excelente
+      if (emergencyFundMonths >= 6) healthScore += 30
+      else if (emergencyFundMonths >= 3) healthScore += 20
+      else if (emergencyFundMonths >= 1) healthScore += 10
+      
+      // 3. Ratio gastos/ingresos (30 puntos): <50% = excelente
+      if (debtToIncomeRatio <= 50) healthScore += 30
+      else if (debtToIncomeRatio <= 70) healthScore += 20
+      else if (debtToIncomeRatio <= 90) healthScore += 10
 
       return {
-        balance,
+        balance: netBalance, // Balance disponible (ingresos - gastos)
+        accountsBalance: totalAccountsBalance, // Saldo total en cuentas
         monthlyIncome,
         monthlyExpenses,
-        monthlyBudget,
-        savingsGoals,
+        savingsRate,
+        emergencyFundMonths,
         healthScore: Math.round(healthScore),
       } as FinancialData
     },
@@ -283,15 +285,15 @@ export function FinancialCalculator() {
     
     if (purchaseMode === 'cash') {
       // Análisis para compra al contado
-      const afterPurchaseBalance = financialData.balance - purchaseAmount
+      const afterPurchaseBalance = financialData.accountsBalance - purchaseAmount
       const monthsOfExpenses = financialData.monthlyExpenses > 0 
         ? afterPurchaseBalance / financialData.monthlyExpenses 
         : 0
 
-      if (purchaseAmount > financialData.balance) {
+      if (purchaseAmount > financialData.accountsBalance) {
         recommendations.push({
           type: 'error',
-          message: `No tienes fondos suficientes. Te faltan ${formatCurrency(purchaseAmount - financialData.balance)}.`
+          message: `No tienes fondos suficientes. Te faltan ${formatCurrency(purchaseAmount - financialData.accountsBalance)}.`
         })
         recommendations.push({
           type: 'warning',
@@ -337,14 +339,14 @@ export function FinancialCalculator() {
       if (financialData.monthlyIncome === 0) {
         recommendations.push({
           type: 'warning',
-          message: `No tienes ingresos registrados en los últimos 2 meses. El análisis se basa en tu balance actual (${formatCurrency(financialData.balance)}).`
+          message: `No tienes ingresos registrados en los últimos 2 meses. El análisis se basa en tu saldo en cuentas (${formatCurrency(financialData.accountsBalance)}).`
         })
         
         // Analizar solo basado en balance
-        if (downPmt > financialData.balance) {
+        if (downPmt > financialData.accountsBalance) {
           recommendations.push({
             type: 'error',
-            message: `No puedes cubrir la cuota inicial de ${formatCurrency(downPmt)}. Tienes ${formatCurrency(financialData.balance)}.`
+            message: `No puedes cubrir la cuota inicial de ${formatCurrency(downPmt)}. Tienes ${formatCurrency(financialData.accountsBalance)}.`
           })
         } else {
           recommendations.push({
@@ -355,14 +357,14 @@ export function FinancialCalculator() {
         return recommendations
       }
 
-      if (downPmt > financialData.balance) {
+      if (downPmt > financialData.accountsBalance) {
         recommendations.push({
           type: 'error',
-          message: `No puedes cubrir la cuota inicial de ${formatCurrency(downPmt)}. Tienes ${formatCurrency(financialData.balance)}.`
+          message: `No puedes cubrir la cuota inicial de ${formatCurrency(downPmt)}. Tienes ${formatCurrency(financialData.accountsBalance)}.`
         })
         recommendations.push({
           type: 'warning',
-          message: `Reduce la cuota inicial a ${formatCurrency(financialData.balance * 0.8)} o ahorra ${formatCurrency(downPmt - financialData.balance)} primero.`
+          message: `Reduce la cuota inicial a ${formatCurrency(financialData.accountsBalance * 0.8)} o ahorra ${formatCurrency(downPmt - financialData.accountsBalance)} primero.`
         })
       }
 
@@ -491,10 +493,10 @@ export function FinancialCalculator() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground flex items-center gap-1">
-                    <PiggyBank className="h-4 w-4" />
-                    Balance Total
+                    <Wallet className="h-4 w-4" />
+                    Saldo en Cuentas
                   </span>
-                  <span className="font-semibold">{formatCurrency(financialData.balance)}</span>
+                  <span className="font-semibold">{formatCurrency(financialData.accountsBalance)}</span>
                 </div>
                 
                 <div className="flex justify-between">
@@ -517,23 +519,23 @@ export function FinancialCalculator() {
                   </span>
                 </div>
 
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Disponible Mensual</span>
-                  <span className="font-semibold text-blue-600">
-                    {formatCurrency(financialData.monthlyIncome - financialData.monthlyExpenses)}
-                  </span>
-                </div>
-
                 <Separator />
 
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Presupuesto Total</span>
-                  <span className="text-sm">{formatCurrency(financialData.monthlyBudget)}</span>
+                  <span className="text-sm text-muted-foreground">Balance del Mes</span>
+                  <span className={`font-semibold ${financialData.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {formatCurrency(financialData.balance)}
+                  </span>
                 </div>
 
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Objetivos Pendientes</span>
-                  <span className="text-sm">{formatCurrency(financialData.savingsGoals)}</span>
+                  <span className="text-sm text-muted-foreground">Tasa de Ahorro</span>
+                  <span className="text-sm font-medium">{financialData.savingsRate.toFixed(1)}%</span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Fondo Emergencia</span>
+                  <span className="text-sm font-medium">{financialData.emergencyFundMonths.toFixed(1)} meses</span>
                 </div>
               </div>
             </>
