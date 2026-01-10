@@ -77,132 +77,186 @@ export function FinancialCalculator() {
     },
   })
 
-  const { data: financialData, isLoading } = useQuery({
+  const { data: financialData, isLoading, error } = useQuery({
     queryKey: ['financial-data', userData?.id],
     queryFn: async () => {
       if (!userData?.id) return null
 
-      const today = new Date()
-      const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
-      const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-      const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`
-      
-      const currentMonthEnd = getMonthEndDate(currentMonth)
-      const lastMonthEnd = getMonthEndDate(lastMonthStr)
+      try {
+        const today = new Date()
+        const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
+        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+        const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`
+        
+        const currentMonthEnd = getMonthEndDate(currentMonth)
+        const lastMonthEnd = getMonthEndDate(lastMonthStr)
 
-      // Balance total de cuentas
-      const { data: accounts } = await supabase
-        .from('accounts')
-        .select('balance')
-        .eq('user_id', userData.id)
+        // Balance total de cuentas
+        const { data: accounts, error: accountsError } = await supabase
+          .from('accounts')
+          .select('balance')
+          .eq('user_id', userData.id)
 
-      const totalAccountsBalance = accounts?.reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0
+        if (accountsError) {
+          console.error('Error fetching accounts:', accountsError)
+          throw accountsError
+        }
 
-      // Ingresos del mes actual
-      const { data: currentIncome } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('user_id', userData.id)
-        .eq('type', 'income')
-        .gte('date', `${currentMonth}-01`)
-        .lte('date', currentMonthEnd)
+        const totalAccountsBalance = accounts?.reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0
 
-      const { data: paidInvoices } = await supabase
-        .from('invoices')
-        .select('amount')
-        .eq('user_id', userData.id)
-        .eq('status', 'paid')
-        .gte('paid_date', `${currentMonth}-01`)
-        .lte('paid_date', currentMonthEnd)
-        .not('paid_date', 'is', null)
-
-      // Si no hay ingresos este mes, buscar en el mes anterior
-      let monthlyIncome = 
-        (currentIncome?.reduce((sum, t) => sum + t.amount, 0) || 0) +
-        (paidInvoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0)
-
-      if (monthlyIncome === 0) {
-        const { data: lastIncome } = await supabase
+        // Ingresos del mes actual
+        const { data: currentIncome, error: incomeError } = await supabase
           .from('transactions')
           .select('amount')
           .eq('user_id', userData.id)
           .eq('type', 'income')
-          .gte('date', `${lastMonthStr}-01`)
-          .lte('date', lastMonthEnd)
+          .gte('date', `${currentMonth}-01`)
+          .lte('date', currentMonthEnd)
 
-        const { data: lastPaidInvoices } = await supabase
+        if (incomeError) {
+          console.error('Error fetching income:', incomeError)
+          throw incomeError
+        }
+
+        const { data: paidInvoices, error: invoicesError } = await supabase
           .from('invoices')
           .select('amount')
           .eq('user_id', userData.id)
           .eq('status', 'paid')
-          .gte('paid_date', `${lastMonthStr}-01`)
-          .lte('paid_date', lastMonthEnd)
+          .gte('paid_date', `${currentMonth}-01`)
+          .lte('paid_date', currentMonthEnd)
           .not('paid_date', 'is', null)
 
-        monthlyIncome = 
-          (lastIncome?.reduce((sum, t) => sum + t.amount, 0) || 0) +
-          (lastPaidInvoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0)
-      }
+        if (invoicesError) {
+          console.error('Error fetching invoices:', invoicesError)
+          throw invoicesError
+        }
 
-      // Gastos del mes actual
-      const { data: currentExpenses } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('user_id', userData.id)
-        .eq('type', 'expense')
-        .gte('date', `${currentMonth}-01`)
-        .lte('date', currentMonthEnd)
+        // Si no hay ingresos este mes, buscar en el mes anterior
+        let monthlyIncome = 
+          (currentIncome?.reduce((sum, t) => sum + t.amount, 0) || 0) +
+          (paidInvoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0)
 
-      let monthlyExpenses = currentExpenses?.reduce((sum, t) => sum + t.amount, 0) || 0
+        if (monthlyIncome === 0) {
+          console.log('No income for current month, trying last month...')
+          
+          const { data: lastIncome, error: lastIncomeError } = await supabase
+            .from('transactions')
+            .select('amount')
+            .eq('user_id', userData.id)
+            .eq('type', 'income')
+            .gte('date', `${lastMonthStr}-01`)
+            .lte('date', lastMonthEnd)
 
-      // Si no hay gastos este mes, buscar en el mes anterior
-      if (monthlyExpenses === 0) {
-        const { data: lastExpenses } = await supabase
+          if (lastIncomeError) {
+            console.error('Error fetching last month income:', lastIncomeError)
+            throw lastIncomeError
+          }
+
+          const { data: lastPaidInvoices, error: lastInvoicesError } = await supabase
+            .from('invoices')
+            .select('amount')
+            .eq('user_id', userData.id)
+            .eq('status', 'paid')
+            .gte('paid_date', `${lastMonthStr}-01`)
+            .lte('paid_date', lastMonthEnd)
+            .not('paid_date', 'is', null)
+
+          if (lastInvoicesError) {
+            console.error('Error fetching last month invoices:', lastInvoicesError)
+            throw lastInvoicesError
+          }
+
+          monthlyIncome = 
+            (lastIncome?.reduce((sum, t) => sum + t.amount, 0) || 0) +
+            (lastPaidInvoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0)
+        }
+
+        // Gastos del mes actual
+        const { data: currentExpenses, error: expensesError } = await supabase
           .from('transactions')
           .select('amount')
           .eq('user_id', userData.id)
           .eq('type', 'expense')
-          .gte('date', `${lastMonthStr}-01`)
-          .lte('date', lastMonthEnd)
+          .gte('date', `${currentMonth}-01`)
+          .lte('date', currentMonthEnd)
 
-        monthlyExpenses = lastExpenses?.reduce((sum, t) => sum + t.amount, 0) || 0
+        if (expensesError) {
+          console.error('Error fetching expenses:', expensesError)
+          throw expensesError
+        }
+
+        let monthlyExpenses = currentExpenses?.reduce((sum, t) => sum + t.amount, 0) || 0
+
+        // Si no hay gastos este mes, buscar en el mes anterior
+        if (monthlyExpenses === 0) {
+          console.log('No expenses for current month, trying last month...')
+          
+          const { data: lastExpenses, error: lastExpensesError } = await supabase
+            .from('transactions')
+            .select('amount')
+            .eq('user_id', userData.id)
+            .eq('type', 'expense')
+            .gte('date', `${lastMonthStr}-01`)
+            .lte('date', lastMonthEnd)
+
+          if (lastExpensesError) {
+            console.error('Error fetching last month expenses:', lastExpensesError)
+            throw lastExpensesError
+          }
+
+          monthlyExpenses = lastExpenses?.reduce((sum, t) => sum + t.amount, 0) || 0
+        }
+
+        // Calcular balance neto (disponible después de gastos)
+        const netBalance = monthlyIncome - monthlyExpenses
+        
+        // Calcular score de salud financiera mejorado
+        const savingsRate = monthlyIncome > 0 ? ((monthlyIncome - monthlyExpenses) / monthlyIncome) * 100 : 0
+        const emergencyFundMonths = monthlyExpenses > 0 ? totalAccountsBalance / monthlyExpenses : 0
+        const debtToIncomeRatio = monthlyIncome > 0 ? (monthlyExpenses / monthlyIncome) * 100 : 100
+        
+        let healthScore = 0
+        
+        // 1. Tasa de ahorro (40 puntos): 20%+ = excelente
+        if (savingsRate >= 20) healthScore += 40
+        else if (savingsRate >= 10) healthScore += 30
+        else if (savingsRate >= 5) healthScore += 20
+        else if (savingsRate > 0) healthScore += 10
+        
+        // 2. Fondo de emergencia (30 puntos): 6+ meses = excelente
+        if (emergencyFundMonths >= 6) healthScore += 30
+        else if (emergencyFundMonths >= 3) healthScore += 20
+        else if (emergencyFundMonths >= 1) healthScore += 10
+        
+        // 3. Ratio gastos/ingresos (30 puntos): <50% = excelente
+        if (debtToIncomeRatio <= 50) healthScore += 30
+        else if (debtToIncomeRatio <= 70) healthScore += 20
+        else if (debtToIncomeRatio <= 90) healthScore += 10
+
+        console.log('Financial data calculated:', {
+          netBalance,
+          totalAccountsBalance,
+          monthlyIncome,
+          monthlyExpenses,
+          savingsRate,
+          emergencyFundMonths,
+          healthScore: Math.round(healthScore)
+        })
+
+        return {
+          balance: netBalance, // Balance disponible (ingresos - gastos)
+          accountsBalance: totalAccountsBalance, // Saldo total en cuentas
+          monthlyIncome,
+          monthlyExpenses,
+          savingsRate,
+          emergencyFundMonths,
+          healthScore: Math.round(healthScore),
+        }
+      } catch (error) {
+        console.error('Error in financial data query:', error)
+        throw error
       }
-
-      // Calcular balance neto (disponible después de gastos)
-      const netBalance = monthlyIncome - monthlyExpenses
-      
-      // Calcular score de salud financiera mejorado
-      const savingsRate = monthlyIncome > 0 ? ((monthlyIncome - monthlyExpenses) / monthlyIncome) * 100 : 0
-      const emergencyFundMonths = monthlyExpenses > 0 ? totalAccountsBalance / monthlyExpenses : 0
-      const debtToIncomeRatio = monthlyIncome > 0 ? (monthlyExpenses / monthlyIncome) * 100 : 100
-      
-      let healthScore = 0
-      
-      // 1. Tasa de ahorro (40 puntos): 20%+ = excelente
-      if (savingsRate >= 20) healthScore += 40
-      else if (savingsRate >= 10) healthScore += 30
-      else if (savingsRate >= 5) healthScore += 20
-      else if (savingsRate > 0) healthScore += 10
-      
-      // 2. Fondo de emergencia (30 puntos): 6+ meses = excelente
-      if (emergencyFundMonths >= 6) healthScore += 30
-      else if (emergencyFundMonths >= 3) healthScore += 20
-      else if (emergencyFundMonths >= 1) healthScore += 10
-      
-      // 3. Ratio gastos/ingresos (30 puntos): <50% = excelente
-      if (debtToIncomeRatio <= 50) healthScore += 30
-      else if (debtToIncomeRatio <= 70) healthScore += 20
-      else if (debtToIncomeRatio <= 90) healthScore += 10
-
-      return {
-        balance: netBalance, // Balance disponible (ingresos - gastos)
-        accountsBalance: totalAccountsBalance, // Saldo total en cuentas
-        monthlyIncome,
-        monthlyExpenses,
-        savingsRate,
-        emergencyFundMonths,
-        healthScore: Math.round(healthScore),
-      } as FinancialData
     },
     enabled: !!userData?.id,
   })
@@ -442,6 +496,33 @@ export function FinancialCalculator() {
       <Card>
         <CardContent className="p-12 text-center">
           <div className="animate-pulse">Cargando datos financieros...</div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center">
+          <div className="text-muted-foreground">Cargando datos financieros...</div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    console.error('Query error:', error)
+    return (
+      <Card>
+        <CardContent className="p-12 text-center space-y-4">
+          <div className="text-destructive font-semibold">Error al cargar datos financieros</div>
+          <div className="text-sm text-muted-foreground">
+            {error instanceof Error ? error.message : 'Error desconocido'}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Revisa la consola del navegador (F12) para más detalles.
+          </div>
         </CardContent>
       </Card>
     )
