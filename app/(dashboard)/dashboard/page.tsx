@@ -11,7 +11,7 @@ import { ClientInvoicesDue } from '@/components/dashboard/client-invoices-due'
 import { IncomeExpensesChart } from '@/components/dashboard/income-expenses-chart'
 import { WeeklyExpenses } from '@/components/dashboard/weekly-expenses'
 import { MonthlyBudgetsCard } from '@/components/dashboard/monthly-budgets-card'
-import { FinancialRecommendations } from '@/components/dashboard/financial-recommendations'
+import { FinancialRecommendationsAdvanced } from '@/components/dashboard/financial-recommendations-advanced'
 import { IVAPayableCard } from '@/components/dashboard/iva-payable-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
@@ -144,7 +144,7 @@ function DashboardDesktop() {
           <IncomeExpensesChart />
         </div>
         <div className="lg:col-span-1">
-          <FinancialRecommendations />
+          <FinancialRecommendationsAdvanced />
         </div>
       </div>
 

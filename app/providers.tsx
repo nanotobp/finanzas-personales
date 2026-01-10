@@ -2,9 +2,15 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Toaster } from '@/components/ui/toaster'
 import { PWAProvider } from '@/components/pwa-provider'
+import { useApplyTheme } from '@/hooks/use-sidebar-preferences'
+
+function ThemeApplier({ children }: { children: React.ReactNode }) {
+  useApplyTheme()
+  return <>{children}</>
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -33,10 +39,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableSystem
         disableTransitionOnChange
       >
-        <PWAProvider>
-          {children}
-          <Toaster />
-        </PWAProvider>
+        <ThemeApplier>
+          <PWAProvider>
+            {children}
+            <Toaster />
+          </PWAProvider>
+        </ThemeApplier>
       </ThemeProvider>
     </QueryClientProvider>
   )
