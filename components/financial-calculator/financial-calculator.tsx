@@ -108,7 +108,7 @@ export function FinancialCalculator() {
 
       const { data: paidInvoices } = await supabase
         .from('invoices')
-        .select('total')
+        .select('amount')
         .eq('user_id', userData.id)
         .eq('status', 'paid')
         .gte('paid_date', `${currentMonth}-01`)
@@ -118,7 +118,7 @@ export function FinancialCalculator() {
       // Si no hay ingresos este mes, buscar en el mes anterior
       let monthlyIncome = 
         (currentIncome?.reduce((sum, t) => sum + t.amount, 0) || 0) +
-        (paidInvoices?.reduce((sum, inv) => sum + inv.total, 0) || 0)
+        (paidInvoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0)
 
       if (monthlyIncome === 0) {
         const { data: lastIncome } = await supabase
@@ -131,7 +131,7 @@ export function FinancialCalculator() {
 
         const { data: lastPaidInvoices } = await supabase
           .from('invoices')
-          .select('total')
+          .select('amount')
           .eq('user_id', userData.id)
           .eq('status', 'paid')
           .gte('paid_date', `${lastMonthStr}-01`)
@@ -140,7 +140,7 @@ export function FinancialCalculator() {
 
         monthlyIncome = 
           (lastIncome?.reduce((sum, t) => sum + t.amount, 0) || 0) +
-          (lastPaidInvoices?.reduce((sum, inv) => sum + inv.total, 0) || 0)
+          (lastPaidInvoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0)
       }
 
       // Gastos del mes actual
