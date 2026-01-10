@@ -32,6 +32,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Percent,
+  Calculator,
 } from 'lucide-react'
 import { useSidebarPreferences, colorGradients } from '@/hooks/use-sidebar-preferences'
 import { Button } from '@/components/ui/button'
@@ -81,6 +82,7 @@ const navigationSections: NavigationSection[] = [
       { name: 'Presupuestos', href: '/budgets', icon: Target },
       { name: 'Objetivos SMART', href: '/goals', icon: PiggyBank },
       { name: 'Suscripciones', href: '/subscriptions', icon: Repeat },
+      { name: 'Calculadora Financiera', href: '/financial-calculator', icon: Calculator },
     ],
   },
   {
