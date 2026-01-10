@@ -20,6 +20,7 @@ import {
 import { CategoryFormDialog } from '@/components/categories/category-form-dialog'
 import { useSidebarPreferences, colorGradients } from '@/hooks/use-sidebar-preferences'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/hooks/use-toast'
 
 export default function SettingsPage() {
   const supabase = createClient()
@@ -27,6 +28,7 @@ export default function SettingsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<any>(null)
   const { color, setColor } = useSidebarPreferences()
+  const { toast } = useToast()
 
   const colorOptions = [
     { name: 'Violeta', value: 'violet', gradient: 'from-violet-600 to-purple-600' },
@@ -137,11 +139,17 @@ export default function SettingsPage() {
             {colorOptions.map((option) => (
               <button
                 key={option.value}
-                onClick={() => setColor(option.value)}
+                onClick={() => {
+                  setColor(option.value)
+                  toast({
+                    title: 'Tema actualizado',
+                    description: `Tema ${option.name} aplicado correctamente`
+                  })
+                }}
                 className={cn(
                   "group relative flex flex-col items-center gap-3 p-4 rounded-lg border-2 transition-all hover:scale-105",
                   color === option.value
-                    ? "border-primary shadow-lg"
+                    ? "border-primary shadow-lg bg-primary/5"
                     : "border-border hover:border-primary/50"
                 )}
               >

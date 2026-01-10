@@ -445,6 +445,16 @@ export function FinancialCalculator() {
     )
   }
 
+  if (!financialData) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center">
+          <div className="text-muted-foreground">No se pudieron cargar los datos financieros. Por favor, intenta de nuevo.</div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div className="grid gap-6 md:grid-cols-3">
       {/* Panel izquierdo: Datos financieros */}
