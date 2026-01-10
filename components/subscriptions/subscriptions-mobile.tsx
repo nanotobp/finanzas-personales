@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/utils'
 import { Bell, Calendar, DollarSign, AlertCircle } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
 
 interface Subscription {
   id: string
@@ -154,10 +153,6 @@ export function SubscriptionsMobile() {
             <p className="text-sm text-slate-600 mb-4">
               Agrega tus servicios para controlar los pagos recurrentes
             </p>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Agregar servicio
-            </Button>
           </div>
         )}
       </div>

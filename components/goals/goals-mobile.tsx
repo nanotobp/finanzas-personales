@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/utils'
 import { Target, TrendingUp, Calendar, Flag } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
 
 interface Goal {
   id: string
@@ -154,10 +153,6 @@ export function GoalsMobile() {
             <p className="text-sm text-slate-600 mb-4">
               Define objetivos SMART para alcanzar tus metas financieras
             </p>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Crear primer objetivo
-            </Button>
           </div>
         )}
       </div>
