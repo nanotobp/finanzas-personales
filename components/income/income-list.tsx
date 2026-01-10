@@ -36,9 +36,9 @@ export function IncomeList() {
   const { data: paidInvoices, isLoading: loadingInvoices } = useQuery({
     queryKey: ['paid-invoices', monthFilter],
     queryFn: async () => {
+      const [year, month] = monthFilter.split('-')
       const startDate = `${monthFilter}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const endDate = new Date(Number(year), Number(month), 0).toISOString().split('T')[0]
 
       const { data } = await supabase
         .from('invoices')
@@ -58,9 +58,9 @@ export function IncomeList() {
   const { data: otherIncome, isLoading: loadingOther } = useQuery({
     queryKey: ['other-income', monthFilter],
     queryFn: async () => {
+      const [year, month] = monthFilter.split('-')
       const startDate = `${monthFilter}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const endDate = new Date(Number(year), Number(month), 0).toISOString().split('T')[0]
 
       const { data } = await supabase
         .from('transactions')
