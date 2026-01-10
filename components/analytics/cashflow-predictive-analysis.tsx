@@ -370,7 +370,7 @@ export const CashflowPredictiveAnalysis = memo(function CashflowPredictiveAnalys
       </CardContent>
     </Card>
   )
-}
+})
 
 // Helper function para calcular tendencia linear
 function calculateTrend(data: { x: number, y: number }[]): number {

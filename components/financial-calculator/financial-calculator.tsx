@@ -842,4 +842,4 @@ export const FinancialCalculator = memo(function FinancialCalculator() {
       )}
     </div>
   )
-}
+})

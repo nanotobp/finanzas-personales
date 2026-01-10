@@ -515,4 +515,4 @@ export const FinancialRecommendationsAdvanced = memo(function FinancialRecommend
       </CardContent>
     </Card>
   )
-}
+})
