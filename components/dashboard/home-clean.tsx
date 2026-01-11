@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, getMonthEndDate } from '@/lib/utils'
@@ -12,7 +13,7 @@ import {
   ShoppingBag,
   TrendingUp,
   TrendingDown,
-  Wallet,
+  UserCircle,
   Target
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -85,6 +86,7 @@ const categoryColors = [
 ]
 
 export function HomeClean() {
+  const router = useRouter()
   const supabase = createClient()
   const currentMonth = new Date().toISOString().slice(0, 7)
 
@@ -173,9 +175,12 @@ export function HomeClean() {
               {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
           </div>
-          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-            <Wallet className="h-5 w-5 text-white" />
-          </div>
+          <button 
+            onClick={() => router.push('/user-profile')}
+            className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center hover:shadow-lg transition-shadow"
+          >
+            <UserCircle className="h-5 w-5 text-white" />
+          </button>
         </div>
 
         {/* Total Balance Card */}

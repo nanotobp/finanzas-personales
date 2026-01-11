@@ -3,70 +3,60 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Target, Plus, Bell, User } from 'lucide-react'
+import { LayoutDashboard, Sparkles, TrendingDown, BarChart3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ProspectFormDialog } from '@/components/prospects/prospect-form-dialog'
 
 const navItems = [
   {
-    label: 'Inicio',
+    label: 'Dashboard',
     href: '/dashboard',
-    icon: Home,
+    icon: LayoutDashboard,
   },
   {
-    label: 'Objetivos',
-    href: '/goals',
-    icon: Target,
+    label: 'Avanzado',
+    href: '/advanced',
+    icon: Sparkles,
   },
   {
-    label: 'add', // Special item for center button
-    href: '#',
-    icon: Plus,
+    label: 'Gastos',
+    href: '/expenses',
+    icon: TrendingDown,
   },
   {
-    label: 'Vencimientos',
-    href: '/subscriptions',
-    icon: Bell,
-  },
-  {
-    label: 'Perfil',
-    href: '/profile',
-    icon: User,
+    label: 'CRM',
+    href: '#crm',
+    icon: BarChart3,
   },
 ]
 
-interface BottomNavigationProps {
-  onAddClick?: () => void
-}
-
-export function BottomNavigation({ onAddClick }: BottomNavigationProps) {
+export function BottomNavigation() {
   const pathname = usePathname()
-
-  const handleAddClick = () => {
-    onAddClick?.()
-  }
+  const [prospectFormOpen, setProspectFormOpen] = useState(false)
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 pb-safe">
-      <div className="max-w-md mx-auto px-2">
-        <div className="flex items-center justify-around h-16">
-          {navItems.map((item, index) => {
-            // Centro - Botón de agregar especial
-            if (item.label === 'add') {
-              return (
-                <button
-                  key="add-button"
-                  onClick={handleAddClick}
-                  className="relative -mt-6 w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all active:scale-95"
-                  aria-label="Agregar transacción"
-                >
-                  <Plus className="w-6 h-6 text-white" strokeWidth={2.5} />
-                </button>
-              )
-            }
+    <>
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 pb-safe">
+        <div className="max-w-md mx-auto px-2">
+          <div className="flex items-center justify-around h-16">
+            {navItems.map((item, index) => {
+              // Botón CRM - abre formulario
+              if (item.label === 'CRM') {
+                return (
+                  <button
+                    key="crm-button"
+                    onClick={() => setProspectFormOpen(true)}
+                    className="flex flex-col items-center justify-center gap-1 min-w-[60px] py-2 transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                  >
+                    <item.icon className="w-5 h-5" strokeWidth={2} />
+                    <span className="text-[10px] font-medium">{item.label}</span>
+                  </button>
+                )
+              }
 
-            const isActive = item.href === '/dashboard' 
-              ? pathname === '/dashboard' || pathname === '/'
-              : pathname.startsWith(item.href)
+              const isActive = item.href === '/dashboard' 
+                ? pathname === '/dashboard' || pathname === '/'
+                : pathname.startsWith(item.href)
 
             return (
               <Link
@@ -95,8 +85,14 @@ export function BottomNavigation({ onAddClick }: BottomNavigationProps) {
               </Link>
             )
           })}
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+      
+      <ProspectFormDialog 
+        open={prospectFormOpen} 
+        onOpenChange={setProspectFormOpen}
+      />
+    </>
   )
 }
