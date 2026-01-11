@@ -1,6 +1,6 @@
 // Service Worker para PWA Finanzas Personales
 // SOLO para habilitar instalación PWA - SIN CACHÉ
-const CACHE_VERSION = 'v4-no-cache-20260110';
+const CACHE_VERSION = 'v5-no-cache-20260111';
 
 // Instalación - sin cachear nada
 self.addEventListener('install', (event) => {
@@ -26,8 +26,17 @@ self.addEventListener('activate', (event) => {
 
 // Fetch - SIEMPRE desde la red, NUNCA cachear
 self.addEventListener('fetch', (event) => {
-  // Pasar todas las peticiones directamente a la red
-  event.respondWith(fetch(event.request));
+  // Pasar todas las peticiones directamente a la red con headers no-cache
+  event.respondWith(
+    fetch(event.request, {
+      cache: 'no-store',
+      headers: {
+        ...event.request.headers,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    }).catch(() => fetch(event.request))
+  );
 });
 
 // Cache First Strategy
