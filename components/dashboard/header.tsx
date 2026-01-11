@@ -1,5 +1,4 @@
 'use client'
-import { RefreshCw } from 'lucide-react'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -325,10 +324,6 @@ export function Header({ user }: HeaderProps) {
                 <DropdownMenuItem onClick={() => router.push('/user-profile')}>
                   <User className="mr-2 h-4 w-4" />
                   Mi Perfil
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.location.reload()}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Actualizar datos
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">

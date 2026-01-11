@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -70,16 +70,34 @@ export function BudgetFormDialog({ open, onOpenChange, budget }: BudgetFormDialo
     formState: { errors },
   } = useForm<BudgetFormData>({
     resolver: zodResolver(budgetSchema),
-    defaultValues: budget ? {
-      category_id: budget.category_id,
-      amount: budget.amount.toString(),
-      month: budget.month,
-      end_date: budget.end_date || '',
-    } : {
+    defaultValues: {
       month: new Date().toISOString().slice(0, 7),
       end_date: '',
+      amount: '',
+      category_id: '',
     },
   })
+
+  // Resetear el formulario cuando cambia el presupuesto o se abre/cierra el diálogo
+  useEffect(() => {
+    if (open) {
+      if (budget) {
+        reset({
+          category_id: budget.category_id,
+          amount: budget.amount.toString(),
+          month: budget.month,
+          end_date: budget.end_date || '',
+        })
+      } else {
+        reset({
+          month: new Date().toISOString().slice(0, 7),
+          end_date: '',
+          amount: '',
+          category_id: '',
+        })
+      }
+    }
+  }, [budget, open, reset])
 
   const createMutation = useMutation({
     mutationFn: async (data: BudgetFormData) => {

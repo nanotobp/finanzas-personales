@@ -7,12 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
 import { Progress } from '@/components/ui/progress'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Settings } from 'lucide-react'
 import { BudgetFormDialog } from './budget-form-dialog'
+import { useRouter } from 'next/navigation'
 
 export function BudgetsList() {
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const router = useRouter()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedBudget, setSelectedBudget] = useState<any>(null)
   const currentMonth = new Date().toISOString().slice(0, 7)
@@ -108,11 +110,32 @@ export function BudgetsList() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Presupuestos del Mes</CardTitle>
-            <Button onClick={handleNewBudget}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Presupuesto
-            </Button>
+            <div>
+              <CardTitle>Presupuestos del Mes</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Gestiona tus categorías en{' '}
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto text-sm" 
+                  onClick={() => router.push('/settings')}
+                >
+                  Configuración
+                </Button>
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => router.push('/settings')}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Categorías
+              </Button>
+              <Button onClick={handleNewBudget}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Presupuesto
+              </Button>
+            </div>
           </div>
         </CardHeader>
       <CardContent>
