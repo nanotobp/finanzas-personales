@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { LogOut, User, Search, Bell, Moon, Sun, TrendingDown, TrendingUp, Wallet, CreditCard, Users } from 'lucide-react'
+import { LogOut, User, Search, Bell, Moon, Sun, TrendingDown, TrendingUp, Wallet, CreditCard, Users, UserCircle } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useSidebarPreferences, colorGradients } from '@/hooks/use-sidebar-preferences'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -287,10 +287,20 @@ export function Header({ user }: HeaderProps) {
               <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-primary rounded-full"></span>
             </Button>
 
-            {/* User Menu */}
+            {/* Avatar para Mi Perfil (solo mobile PWA) */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="md:hidden rounded-lg h-9 w-9"
+              onClick={() => router.push('/user-profile')}
+            >
+              <UserCircle className="h-5 w-5" />
+            </Button>
+
+            {/* User Menu (solo desktop) */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2 rounded-lg px-2 h-9">
+                <Button variant="ghost" className="gap-2 rounded-lg px-2 h-9 hidden md:flex">
                   <div className={cn(
                     "h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br",
                     gradient

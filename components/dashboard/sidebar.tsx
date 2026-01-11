@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { ProspectFormDialog } from '@/components/prospects/prospect-form-dialog'
 import {
   LayoutDashboard,
   TrendingDown,
@@ -107,6 +108,7 @@ const navigationSections: NavigationSection[] = [
 export function Sidebar() {
   const pathname = usePathname()
   const [collapsedSections, setCollapsedSections] = useState<string[]>([])
+  const [prospectFormOpen, setProspectFormOpen] = useState(false)
   const { isCollapsed, color, toggleCollapsed } = useSidebarPreferences()
   const gradient = colorGradients[color as keyof typeof colorGradients] || colorGradients.violet
 
@@ -252,7 +254,7 @@ export function Sidebar() {
               </Link>
             )
           })}
-          {navigationSections[2].items.slice(0, 3).map((item) => {
+          {navigationSections[2].items.slice(0, 2).map((item) => {
             const isActive = pathname === item.href
             return (
               <Link
@@ -272,7 +274,19 @@ export function Sidebar() {
               </Link>
             )
           })}
+          <button
+            onClick={() => setProspectFormOpen(true)}
+            className="flex flex-col items-center justify-center rounded-lg p-2 transition-colors min-w-[60px] text-muted-foreground hover:bg-accent"
+          >
+            <BarChart3 className="h-5 w-5 mb-1" />
+            <span className="text-[10px] font-medium">CRM</span>
+          </button>
         </nav>
+        
+        <ProspectFormDialog 
+          open={prospectFormOpen} 
+          onOpenChange={setProspectFormOpen}
+        />
       </div>
     </>
   )

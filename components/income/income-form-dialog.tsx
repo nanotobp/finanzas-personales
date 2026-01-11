@@ -216,8 +216,8 @@ export function IncomeFormDialog({ open, onOpenChange, income }: IncomeFormDialo
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={onOpenChange} modal={true}>
+      <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()} onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{income ? 'Editar Ingreso' : 'Nuevo Ingreso'}</DialogTitle>
         </DialogHeader>
