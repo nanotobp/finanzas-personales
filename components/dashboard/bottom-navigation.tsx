@@ -3,25 +3,30 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Sparkles, TrendingDown, BarChart3 } from 'lucide-react'
+import { Home, Target, Plus, Bell, BarChart3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ProspectFormDialog } from '@/components/prospects/prospect-form-dialog'
 
 const navItems = [
   {
-    label: 'Dashboard',
+    label: 'Inicio',
     href: '/dashboard',
-    icon: LayoutDashboard,
+    icon: Home,
   },
   {
-    label: 'Avanzado',
-    href: '/advanced',
-    icon: Sparkles,
+    label: 'Objetivos',
+    href: '/goals',
+    icon: Target,
   },
   {
-    label: 'Gastos',
-    href: '/expenses',
-    icon: TrendingDown,
+    label: 'add', // Special item for center button
+    href: '#',
+    icon: Plus,
+  },
+  {
+    label: 'Vencimientos',
+    href: '/subscriptions',
+    icon: Bell,
   },
   {
     label: 'CRM',
@@ -30,9 +35,17 @@ const navItems = [
   },
 ]
 
-export function BottomNavigation() {
+interface BottomNavigationProps {
+  onAddClick?: () => void
+}
+
+export function BottomNavigation({ onAddClick }: BottomNavigationProps) {
   const pathname = usePathname()
   const [prospectFormOpen, setProspectFormOpen] = useState(false)
+
+  const handleAddClick = () => {
+    onAddClick?.()
+  }
 
   return (
     <>
@@ -40,7 +53,21 @@ export function BottomNavigation() {
         <div className="max-w-md mx-auto px-2">
           <div className="flex items-center justify-around h-16">
             {navItems.map((item, index) => {
-              // Botón CRM - abre formulario
+              // Centro - Botón de agregar especial
+              if (item.label === 'add') {
+                return (
+                  <button
+                    key="add-button"
+                    onClick={handleAddClick}
+                    className="relative -mt-6 w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all active:scale-95"
+                    aria-label="Agregar transacción"
+                  >
+                    <Plus className="w-6 h-6 text-white" strokeWidth={2.5} />
+                  </button>
+                )
+              }
+
+              // Botón CRM - abre formulario de prospecto
               if (item.label === 'CRM') {
                 return (
                   <button

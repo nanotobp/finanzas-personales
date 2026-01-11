@@ -176,7 +176,7 @@ export function HomeClean() {
             </p>
           </div>
           <button 
-            onClick={() => router.push('/user-profile')}
+            onClick={() => router.push('/profile')}
             className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center hover:shadow-lg transition-shadow"
           >
             <UserCircle className="h-5 w-5 text-white" />
