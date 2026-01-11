@@ -19,25 +19,13 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 // Componente para stats rápidos con datos reales
 function QuickStats() {
-  const supabase = createClient()
   const currentMonth = new Date().toISOString().slice(0, 7)
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['quick-stats', currentMonth],
+    queryKey: ['dashboard-stats', currentMonth],
     queryFn: async () => {
-      const startDate = `${currentMonth}-01`
-      const endDate = getMonthEndDate(currentMonth)
-
-      const { data: transactions } = await supabase
-        .from('transactions')
-        .select('amount, type')
-        .gte('date', startDate)
-        .lte('date', endDate)
-
-      const income = transactions?.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0) || 0
-      const expenses = transactions?.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0) || 0
-
-      return { income, expenses }
+      const { getCurrentMonthIncomeExpenses } = await import('@/lib/services/dashboard-service')
+      return getCurrentMonthIncomeExpenses(currentMonth)
     },
   })
 
@@ -104,12 +92,8 @@ export function HomeClean() {
   const { data: totalBalance, isLoading: loadingBalance } = useQuery({
     queryKey: ['total-balance'],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('accounts')
-        .select('balance')
-        .eq('is_active', true)
-      
-      return data?.reduce((sum, a) => sum + Number(a.balance), 0) || 0
+      const { getTotalBalance } = await import('@/lib/services/dashboard-service')
+      return getTotalBalance()
     },
   })
 

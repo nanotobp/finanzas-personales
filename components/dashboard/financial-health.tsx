@@ -17,28 +17,18 @@ export function FinancialHealth() {
   const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 7)
 
   const { data: healthData, isLoading } = useQuery({
-    queryKey: ['financial-health', currentMonth],
+    queryKey: ['dashboard-stats', currentMonth], // Reutilizar la misma cache
     queryFn: async () => {
-      const startDate = `${currentMonth}-01`
-      const endDate = getMonthEndDate(currentMonth)
-
-      const lastMonthStart = `${lastMonth}-01`
-      const lastMonthEnd = getMonthEndDate(lastMonth)
-
-      const [accountsRes, transactionsRes, lastMonthTransactionsRes, budgetsRes] = await Promise.all([
-        supabase.from('accounts').select('balance').eq('is_active', true),
-        supabase.from('transactions').select('amount, type').gte('date', startDate).lte('date', endDate),
-        supabase.from('transactions').select('amount, type').gte('date', lastMonthStart).lte('date', lastMonthEnd),
+      const { getDashboardStats } = await import('@/lib/services/dashboard-service')
+      
+      const [currentStats, lastStats, budgetsRes] = await Promise.all([
+        getDashboardStats(currentMonth),
+        getDashboardStats(lastMonth),
         supabase.from('budgets').select('amount, category_id').eq('month', currentMonth)
       ])
 
-      const totalBalance = accountsRes.data?.reduce((sum, a) => sum + Number(a.balance), 0) || 0
-      
-      const currentIncome = transactionsRes.data?.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0) || 0
-      const currentExpenses = transactionsRes.data?.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0) || 0
-      
-      const lastIncome = lastMonthTransactionsRes.data?.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0) || 0
-      const lastExpenses = lastMonthTransactionsRes.data?.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0) || 0
+      const { income: currentIncome, expenses: currentExpenses, balance: totalBalance } = currentStats
+      const { income: lastIncome, expenses: lastExpenses } = lastStats
 
       const savingsRate = currentIncome > 0 ? ((currentIncome - currentExpenses) / currentIncome) * 100 : 0
       const totalBudget = budgetsRes.data?.reduce((sum, b) => sum + Number(b.amount), 0) || 0

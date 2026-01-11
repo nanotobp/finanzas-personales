@@ -8,13 +8,13 @@ import { PWAProvider } from '@/components/pwa-provider'
 import { useApplyTheme } from '@/hooks/use-sidebar-preferences'
 import dynamic from 'next/dynamic'
 
-// Cargar React Query Devtools solo en desarrollo para reducir bundle en producción
-const ReactQueryDevtools = 
-  process.env.NODE_ENV === 'development' 
-    ? dynamic(() => import('@tanstack/react-query-devtools').then(mod => mod.ReactQueryDevtools), {
-        ssr: false
-      })
-    : () => null
+// React Query Devtools deshabilitado
+// const ReactQueryDevtools = 
+//   process.env.NODE_ENV === 'development' 
+//     ? dynamic(() => import('@tanstack/react-query-devtools').then(mod => mod.ReactQueryDevtools), {
+//         ssr: false
+//       })
+//     : () => null
 
 function ThemeApplier({ children }: { children: React.ReactNode }) {
   useApplyTheme()
@@ -55,7 +55,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
           </PWAProvider>
         </ThemeApplier>
       </ThemeProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* ReactQueryDevtools deshabilitado */}
+      {/* <ReactQueryDevtools initialIsOpen={false} /> */}
     </QueryClientProvider>
   )
 }

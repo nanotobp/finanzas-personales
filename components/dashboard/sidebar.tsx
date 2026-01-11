@@ -33,6 +33,7 @@ import {
   ChevronRight,
   Percent,
   Calculator,
+  UserPlus,
 } from 'lucide-react'
 import { useSidebarPreferences, colorGradients } from '@/hooks/use-sidebar-preferences'
 import { Button } from '@/components/ui/button'
@@ -88,6 +89,7 @@ const navigationSections: NavigationSection[] = [
   {
     title: 'Emprendedor',
     items: [
+      { name: 'Prospectos', href: '/prospects', icon: UserPlus },
       { name: 'Clientes', href: '/clients', icon: Users },
       { name: 'Proyectos', href: '/projects', icon: FolderKanban },
     ],

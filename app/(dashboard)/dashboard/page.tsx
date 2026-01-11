@@ -56,41 +56,10 @@ function DashboardDesktop() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard-stats', currentMonth],
     queryFn: async () => {
-      const startDate = `${currentMonth}-01`
-      const year = parseInt(currentMonth.split('-')[0])
-      const month = parseInt(currentMonth.split('-')[1])
-      const lastDay = new Date(year, month, 0).getDate()
-      const endDate = `${currentMonth}-${String(lastDay).padStart(2, '0')}`
-
-      const [transactionsResult, accountsResult, invoicesResult] = await Promise.all([
-        supabase.from('transactions').select('amount, type').gte('date', startDate).lte('date', endDate),
-        supabase.from('accounts').select('balance').eq('is_active', true),
-        supabase.from('invoices').select('amount, status, paid_date').eq('status', 'paid').not('paid_date', 'is', null).gte('paid_date', startDate).lte('paid_date', endDate)
-      ])
-
-      const transactions = transactionsResult.data || []
-      const accounts = accountsResult.data || []
-      const paidInvoices = invoicesResult.data || []
-
-      const { totalIncome, totalExpenses } = transactions.reduce(
-        (acc, t) => {
-          const amount = Number(t.amount)
-          if (t.type === 'income') acc.totalIncome += amount
-          else if (t.type === 'expense') acc.totalExpenses += amount
-          return acc
-        },
-        { totalIncome: 0, totalExpenses: 0 }
-      )
-
-      const invoiceIncome = paidInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0)
-      const finalIncome = totalIncome + invoiceIncome
-      const totalBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
-
+      const { getDashboardStats } = await import('@/lib/services/dashboard-service')
+      const data = await getDashboardStats(currentMonth)
       return {
-        income: finalIncome,
-        expenses: totalExpenses,
-        balance: totalBalance,
-        net: finalIncome - totalExpenses,
+        ...data,
         balanceChange: 3.12,
         incomeChange: 2.84,
         expensesChange: -4.78,
