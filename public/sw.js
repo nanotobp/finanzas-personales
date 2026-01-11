@@ -1,5 +1,5 @@
 // Service Worker para PWA Finanzas Personales
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3-20260110'; // Versión actualizada para forzar limpieza
 const CACHE_NAME = `finanzas-personales-${CACHE_VERSION}`;
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
@@ -10,6 +10,19 @@ const STATIC_ASSETS = [
   '/',
   '/manifest.json',
 ];
+
+// URLs que NUNCA deben ser cacheadas (datos dinámicos)
+const NEVER_CACHE = [
+  '/api/',
+  'supabase.co',
+  'vercel-insights',
+  'vercel-analytics'
+];
+
+// Función para verificar si una URL debe ser ignorada del caché
+function shouldNeverCache(url) {
+  return NEVER_CACHE.some(pattern => url.includes(pattern));
+}
 
 // Instalación del Service Worker
 self.addEventListener('install', (event) => {
@@ -56,6 +69,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // NUNCA cachear datos de API o Supabase
+  if (shouldNeverCache(url.href)) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   // Ignorar requests de desarrollo de Next.js
   if (
     url.pathname.startsWith('/_next/webpack') ||
@@ -72,9 +91,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Estrategia para documentos HTML: Network First
+  // Estrategia para documentos HTML: Network First (sin caché de datos)
   if (request.destination === 'document') {
-    event.respondWith(networkFirst(request, DYNAMIC_CACHE));
+    event.respondWith(networkFirstNoCache(request));
     return;
   }
 
@@ -88,11 +107,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Para el resto: Network First
-  event.respondWith(networkFirst(request, DYNAMIC_CACHE));
+  // Para el resto: Network Only (no cachear datos dinámicos)
+  event.respondWith(fetch(request));
 });
 
-// Network First Strategy
+// Network First Strategy sin caché de datos
+async function networkFirstNoCache(request) {
+  try {
+    const networkResponse = await fetch(request);
+    return networkResponse;
+  } catch (error) {
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    return new Response('Offline', { status: 503 });
+  }
+}
+
+// Network First Strategy (legacy)
 async function networkFirst(request, cacheName) {
   try {
     const networkResponse = await fetch(request);
