@@ -63,6 +63,8 @@ export function ExpensesList() {
       const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
         .toISOString().split('T')[0]
 
+      console.log('🔍 Query expenses:', { userId: user.id, startDate, endDate, categoryFilter })
+
       let query = supabase
         .from('transactions')
         .select('*, categories(name, icon, color), accounts(name)')
@@ -76,10 +78,16 @@ export function ExpensesList() {
         query = query.eq('category_id', categoryFilter)
       }
 
-      const { data } = await query
+      const { data, error } = await query
+      
+      console.log('📊 Expenses result:', { count: data?.length, error })
+      if (data) {
+        console.log('Expenses:', data)
+      }
+      
       return data || []
     },
-    staleTime: 2 * 60 * 1000, // Cache por 2 minutos
+    staleTime: 0, // Desactivar caché temporalmente para debugging
   })
 
   const filteredExpenses = expenses?.filter(expense =>
