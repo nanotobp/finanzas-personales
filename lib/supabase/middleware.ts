@@ -54,7 +54,15 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  // Solo intentar obtener el usuario si hay cookies de sesión
+  // Esto evita el error 401 en la consola cuando no hay sesión
+  const hasSessionCookie = request.cookies.getAll().some(cookie => 
+    cookie.name.includes('auth-token') || cookie.name.includes('supabase')
+  )
+
+  if (hasSessionCookie) {
+    await supabase.auth.getUser()
+  }
 
   return response
 }
