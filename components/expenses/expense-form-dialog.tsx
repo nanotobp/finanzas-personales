@@ -143,6 +143,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
       if (error) throw error
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] })
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
@@ -170,6 +171,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
       if (error) throw error
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] })
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
@@ -187,6 +189,9 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
       } else {
         await createMutation.mutateAsync(data)
       }
+    } catch (error) {
+      console.error('Error al guardar el gasto:', error)
+      alert('Error al guardar el gasto. Por favor, intenta de nuevo.')
     } finally {
       setIsSubmitting(false)
     }
@@ -199,7 +204,18 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
           <DialogTitle>{expense ? 'Editar Gasto' : 'Nuevo Gasto'}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {categories.length === 0 || accounts.length === 0 ? (
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800">
+              {categories.length === 0 && accounts.length === 0
+                ? 'Debes crear al menos una categoría y una cuenta antes de registrar gastos.'
+                : categories.length === 0
+                ? 'Debes crear al menos una categoría de gastos.'
+                : 'Debes crear al menos una cuenta.'}
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="amount">Monto</Label>
             <Input
@@ -331,6 +347,7 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
             </Button>
           </div>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   )

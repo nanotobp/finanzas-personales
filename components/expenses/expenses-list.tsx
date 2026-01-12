@@ -104,13 +104,15 @@ export function ExpensesList() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <CardTitle>Gastos del Mes</CardTitle>
-            <Button onClick={handleNewExpense}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Gasto
-            </Button>
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <CardTitle>Gastos del Mes</CardTitle>
+              <Button onClick={handleNewExpense}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Gasto
+              </Button>
+            </div>
+            <div className="flex flex-col md:flex-row gap-2">
               <div className="relative flex-1 md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -121,7 +123,7 @@ export function ExpensesList() {
                 />
               </div>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full md:w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Categoría" />
                 </SelectTrigger>
