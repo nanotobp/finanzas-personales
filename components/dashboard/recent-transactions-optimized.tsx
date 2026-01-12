@@ -56,11 +56,15 @@ export const RecentTransactions = memo(function RecentTransactions({ userId }: R
   const supabase = createClient()
 
   const { data: transactions } = useQuery({
-    queryKey: ['recent-transactions'],
+    queryKey: ['recent-transactions', userId],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return []
+
       const { data } = await supabase
         .from('transactions')
         .select('id, type, amount, description, date, categories(name, icon, color)')
+        .eq('user_id', user.id)
         .order('date', { ascending: false })
         .limit(10)
 

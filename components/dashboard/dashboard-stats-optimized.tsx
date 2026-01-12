@@ -82,6 +82,9 @@ export const DashboardStats = memo(function DashboardStats({ stats }: { stats: a
   const { data: chartData } = useQuery({
     queryKey: ['dashboard-charts-data'],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return { incomeData: [], expensesData: [], balanceData: [] }
+
       const now = new Date()
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
       const startDate = thirtyDaysAgo.toISOString().slice(0, 10)
@@ -90,6 +93,7 @@ export const DashboardStats = memo(function DashboardStats({ stats }: { stats: a
       const { data: transactions } = await supabase
         .from('transactions')
         .select('date, type, amount')
+        .eq('user_id', user.id)
         .gte('date', startDate)
         .order('date', { ascending: true })
 
@@ -97,6 +101,7 @@ export const DashboardStats = memo(function DashboardStats({ stats }: { stats: a
       const { data: invoices } = await supabase
         .from('invoices')
         .select('paid_date, amount')
+        .eq('user_id', user.id)
         .eq('status', 'paid')
         .not('paid_date', 'is', null)
         .gte('paid_date', startDate)

@@ -56,6 +56,9 @@ export function ExpensesList() {
   const { data: expenses, isLoading } = useQuery({
     queryKey: ['expenses', currentMonth, categoryFilter],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return []
+
       const startDate = `${currentMonth}-01`
       const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
         .toISOString().split('T')[0]
@@ -63,6 +66,7 @@ export function ExpensesList() {
       let query = supabase
         .from('transactions')
         .select('*, categories(name, icon, color), accounts(name)')
+        .eq('user_id', user.id)
         .eq('type', 'expense')
         .gte('date', startDate)
         .lte('date', endDate)
