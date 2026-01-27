@@ -9,22 +9,27 @@ import { formatCurrency } from '@/lib/utils'
 import { PiggyBank, Pencil, Trash2, Calendar } from 'lucide-react'
 import { GoalFormDialog } from './goal-form-dialog'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/use-auth'
 
 export function GoalsList() {
   const supabase = createClient()
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { userId } = useAuth()
 
   const { data: goals, isLoading } = useQuery({
     queryKey: ['savings-goals'],
     queryFn: async () => {
+      if (!userId) return []
       const { data } = await supabase
         .from('savings_goals')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       return data || []
     },
+    enabled: !!userId,
   })
 
   const deleteMutation = useMutation({

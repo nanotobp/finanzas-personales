@@ -4,17 +4,18 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { DollarSign, TrendingUp, TrendingDown } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { Coins, TrendingUp, TrendingDown } from 'lucide-react'
+import { formatGs } from '@/lib/utils'
+import { useAuth } from '@/hooks/use-auth'
 
 export function IVAPayableCard() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data, isLoading } = useQuery({
     queryKey: ['iva-payable'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const now = new Date()
       const currentMonth = now.toISOString().slice(0, 7)
@@ -29,13 +30,13 @@ export function IVAPayableCard() {
         supabase
           .from('transactions')
           .select('type, iva_amount')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .gte('date', startDate)
           .lte('date', endDate),
         supabase
           .from('invoices')
           .select('iva_amount')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('status', 'paid')
           .not('paid_date', 'is', null)
       ])
@@ -60,6 +61,7 @@ export function IVAPayableCard() {
 
       return { ivaCobrado, ivaPagado, ivaPorPagar }
     },
+    enabled: !!userId,
   })
 
   if (isLoading) {
@@ -84,7 +86,7 @@ export function IVAPayableCard() {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-orange-600" />
+          <Coins className="h-5 w-5 text-orange-600" />
           IVA a Pagar
         </CardTitle>
       </CardHeader>
@@ -92,7 +94,7 @@ export function IVAPayableCard() {
         <div>
           <p className="text-sm text-muted-foreground mb-1">Total este mes</p>
           <p className={`text-3xl font-bold ${ivaPorPagar >= 0 ? 'text-orange-600' : 'text-green-600'}`}>
-            {formatCurrency(Math.abs(ivaPorPagar))}
+            {formatGs(Math.abs(ivaPorPagar))}
           </p>
           {ivaPorPagar < 0 && (
             <p className="text-xs text-green-600 mt-1">A favor</p>
@@ -106,7 +108,7 @@ export function IVAPayableCard() {
               <span className="text-sm text-muted-foreground">IVA Cobrado</span>
             </div>
             <span className="text-sm font-mono font-medium">
-              {formatCurrency(ivaCobrado)}
+              {formatGs(ivaCobrado)}
             </span>
           </div>
 
@@ -116,7 +118,7 @@ export function IVAPayableCard() {
               <span className="text-sm text-muted-foreground">IVA Pagado</span>
             </div>
             <span className="text-sm font-mono font-medium">
-              {formatCurrency(ivaPagado)}
+              {formatGs(ivaPagado)}
             </span>
           </div>
         </div>

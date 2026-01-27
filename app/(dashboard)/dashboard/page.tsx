@@ -16,7 +16,7 @@ import { IVAPayableCard } from '@/components/dashboard/iva-payable-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
 import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
 
 function StatsSkeleton() {
   return (
@@ -50,7 +50,7 @@ function TransactionsSkeleton() {
 }
 
 function DashboardDesktop() {
-  const supabase = createClient()
+  const { user } = useAuth()
   const currentMonth = new Date().toISOString().slice(0, 7)
 
   const { data: stats, isLoading } = useQuery({
@@ -68,14 +68,6 @@ function DashboardDesktop() {
     },
   })
 
-  const { data: userData } = useQuery({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getUser()
-      return data
-    },
-  })
-
   return (
     <div className="space-y-8">
       {/* Header mejorado */}
@@ -84,7 +76,7 @@ function DashboardDesktop() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground mt-1">
-              Bienvenido de vuelta, {userData?.user?.user_metadata?.full_name || userData?.user?.user_metadata?.name || userData?.user?.email?.split('@')[0] || 'Usuario'}
+              Bienvenido de vuelta, {user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuario'}
             </p>
           </div>
           <div className="text-right">
@@ -131,7 +123,7 @@ function DashboardDesktop() {
       <div className="grid gap-6 md:grid-cols-2">
         <MonthlyBudgetsCard />
         <Suspense fallback={<TransactionsSkeleton />}>
-          {userData?.user && <UpcomingSubscriptions userId={userData.user.id} />}
+          {user && <UpcomingSubscriptions userId={user.id} />}
         </Suspense>
       </div>
 

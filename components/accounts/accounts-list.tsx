@@ -18,10 +18,12 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { useAuth } from '@/hooks/use-auth'
 
 export function AccountsList() {
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { userId } = useAuth()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<any>(null)
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
@@ -42,12 +44,15 @@ export function AccountsList() {
   const { data: accounts, isLoading } = useQuery({
     queryKey: ['accounts'],
     queryFn: async () => {
+      if (!userId) return []
       const { data } = await supabase
         .from('accounts')
         .select('*')
+        .eq('user_id', userId)
         .order('name')
       return data || []
     },
+    enabled: !!userId,
   })
 
   const totalBalance = accounts?.reduce((sum, a) => sum + Number(a.balance), 0) || 0

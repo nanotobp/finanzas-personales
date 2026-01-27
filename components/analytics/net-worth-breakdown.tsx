@@ -5,20 +5,21 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Wallet, CreditCard, TrendingUp } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 export function NetWorthBreakdown() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: breakdown, isLoading } = useQuery({
     queryKey: ['net-worth-breakdown'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return null
+      if (!userId) return null
 
       const { data: accounts } = await supabase
         .from('accounts')
         .select('name, balance, type')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
 
       const assets = accounts?.filter(a => Number(a.balance) >= 0) || []
       const liabilities = accounts?.filter(a => Number(a.balance) < 0) || []
@@ -34,6 +35,7 @@ export function NetWorthBreakdown() {
         netWorth: totalAssets - totalLiabilities,
       }
     },
+    enabled: !!userId,
   })
 
   if (isLoading) return null

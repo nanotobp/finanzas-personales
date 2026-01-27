@@ -6,15 +6,16 @@ import { createClient } from '@/lib/supabase/client'
 import { Scale } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Progress } from '@/components/ui/progress'
+import { useAuth } from '@/hooks/use-auth'
 
 export function DebtToIncomeRatio() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: dtiData } = useQuery({
-    queryKey: ['debt-to-income-ratio'],
+    queryKey: ['debt-to-income-ratio', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return null
+      if (!userId) return null
 
       // Calcular ingreso mensual promedio (últimos 3 meses)
       const threeMonthsAgo = new Date()
@@ -23,7 +24,7 @@ export function DebtToIncomeRatio() {
       const { data: incomeTransactions, error: incomeError } = await supabase
         .from('transactions')
         .select('amount')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('type', 'income')
         .gte('date', threeMonthsAgo.toISOString().split('T')[0])
 
@@ -36,7 +37,7 @@ export function DebtToIncomeRatio() {
       const { data: subscriptions, error: subsError } = await supabase
         .from('subscriptions')
         .select('amount')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true)
 
       if (subsError) throw subsError
@@ -47,7 +48,7 @@ export function DebtToIncomeRatio() {
       const { data: debtExpenses, error: debtError } = await supabase
         .from('transactions')
         .select('amount, categories(name)')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('type', 'expense')
         .gte('date', threeMonthsAgo.toISOString().split('T')[0])
 
@@ -69,7 +70,8 @@ export function DebtToIncomeRatio() {
         dtiRatio: Math.min(dtiRatio, 100),
         availableIncome: monthlyIncome - totalMonthlyDebt
       }
-    }
+    },
+    enabled: !!userId
   })
 
   const ratio = dtiData?.dtiRatio || 0

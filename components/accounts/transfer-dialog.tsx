@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select'
 import { ArrowLeftRight } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/use-auth'
 
 const transferSchema = z.object({
   from_account_id: z.string().min(1, 'Selecciona cuenta origen'),
@@ -44,17 +45,21 @@ export function TransferDialog() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: accounts } = useQuery({
     queryKey: ['accounts'],
     queryFn: async () => {
+      if (!userId) return []
       const { data } = await supabase
         .from('accounts')
         .select('*')
+        .eq('user_id', userId)
         .eq('is_active', true)
         .order('name')
       return data || []
     },
+    enabled: !!userId,
   })
 
   const {
@@ -70,8 +75,7 @@ export function TransferDialog() {
 
   const transferMutation = useMutation({
     mutationFn: async (data: TransferFormData) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No autenticado')
+      if (!userId) throw new Error('No autenticado')
 
       const amount = parseFloat(data.amount)
       const fromAccount = accounts?.find(a => a.id === data.from_account_id)
@@ -99,7 +103,7 @@ export function TransferDialog() {
 
       // Egreso de cuenta origen
       await supabase.from('transactions').insert({
-        user_id: user.id,
+        user_id: userId,
         type: 'expense',
         amount: amount,
         description: `${description} (a ${toAccount.name})`,
@@ -110,7 +114,7 @@ export function TransferDialog() {
 
       // Ingreso a cuenta destino
       await supabase.from('transactions').insert({
-        user_id: user.id,
+        user_id: userId,
         type: 'income',
         amount: amount,
         description: `${description} (desde ${fromAccount.name})`,

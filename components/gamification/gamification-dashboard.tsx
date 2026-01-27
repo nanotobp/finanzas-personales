@@ -16,6 +16,7 @@ import {
   Lock
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/hooks/use-auth'
 
 interface Achievement {
   id: string
@@ -108,24 +109,24 @@ function EmptyStateGamification() {
 
 export function GamificationDashboard() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: userLevel, isLoading: levelLoading } = useQuery({
     queryKey: ['user-level'],
     queryFn: async (): Promise<UserLevel> => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       // Obtener o crear puntos del usuario
       let { data: points } = await supabase
         .from('user_points')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single()
 
       if (!points) {
         const { data: newPoints } = await supabase
           .from('user_points')
-          .insert({ user_id: user.id })
+          .insert({ user_id: userId })
           .select()
           .single()
         points = newPoints
@@ -155,14 +156,14 @@ export function GamificationDashboard() {
         current_streak: points.current_streak,
         longest_streak: points.longest_streak
       }
-    }
+    },
+    enabled: !!userId
   })
 
   const { data: achievements, isLoading: achievementsLoading } = useQuery({
     queryKey: ['achievements'],
     queryFn: async (): Promise<Achievement[]> => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       // Obtener todos los logros
       const { data: allAchievements } = await supabase
@@ -177,7 +178,7 @@ export function GamificationDashboard() {
       const { data: userAchievements } = await supabase
         .from('user_achievements')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
 
       const userAchievementMap = new Map(
         userAchievements?.map(ua => [ua.achievement_id, ua]) || []
@@ -196,7 +197,7 @@ export function GamificationDashboard() {
                 const { count } = await supabase
                   .from('transactions')
                   .select('*', { count: 'exact', head: true })
-                  .eq('user_id', user.id)
+                  .eq('user_id', userId)
                 progress = count || 0
                 break
               }
@@ -204,7 +205,7 @@ export function GamificationDashboard() {
                 const { data: goals } = await supabase
                   .from('savings_goals')
                   .select('current_amount')
-                  .eq('user_id', user.id)
+                  .eq('user_id', userId)
                 progress = goals?.reduce((sum, g) => sum + Number(g.current_amount), 0) || 0
                 break
               }
@@ -212,7 +213,7 @@ export function GamificationDashboard() {
                 const { data: points } = await supabase
                   .from('user_points')
                   .select('current_streak')
-                  .eq('user_id', user.id)
+                  .eq('user_id', userId)
                   .single()
                 progress = points?.current_streak || 0
                 break
@@ -221,7 +222,7 @@ export function GamificationDashboard() {
                 const { data: completedGoals, count } = await supabase
                   .from('savings_goals')
                   .select('*', { count: 'exact', head: true })
-                  .eq('user_id', user.id)
+                  .eq('user_id', userId)
                   .gte('progress_percentage', 100)
                 progress = count || 0
                 break
@@ -230,7 +231,7 @@ export function GamificationDashboard() {
                 const { data: budgets } = await supabase
                   .from('budgets')
                   .select('amount')
-                  .eq('user_id', user.id)
+                  .eq('user_id', userId)
                 // Por ahora, contar presupuestos creados como progreso
                 // TODO: Implementar cálculo real cuando exista spent
                 progress = budgets?.length || 0
@@ -249,7 +250,8 @@ export function GamificationDashboard() {
       )
 
       return achievementsWithProgress
-    }
+    },
+    enabled: !!userId
   })
 
   const getLevelBadge = (level: number) => {

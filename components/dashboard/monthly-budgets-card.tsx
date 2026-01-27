@@ -4,8 +4,9 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getMonthEndDate } from '@/lib/utils'
 import { ShoppingBag, Zap, Car, Home, DollarSign, TrendingUp } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 const iconMap: Record<string, any> = {
   'shopping': ShoppingBag,
@@ -24,25 +25,28 @@ const colorMap = [
 
 export function MonthlyBudgetsCard() {
   const supabase = createClient()
+  const { userId } = useAuth()
   const currentMonth = new Date().toISOString().slice(0, 7)
 
   const { data: budgets, isLoading } = useQuery({
     queryKey: ['monthly-budgets', currentMonth],
     queryFn: async () => {
       const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const endDate = getMonthEndDate(currentMonth)
+      if (!userId) return []
 
       const [budgetsRes, expensesRes] = await Promise.all([
         supabase
           .from('budgets')
           .select('*, categories(name, icon)')
+          .eq('user_id', userId)
           .eq('month', currentMonth)
           .or(`end_date.is.null,end_date.gte.${currentMonth}`)
           .limit(4),
         supabase
           .from('transactions')
-          .select('amount, category_id')
+          .select('amount, category_id, project_id')
+          .eq('user_id', userId)
           .eq('type', 'expense')
           .gte('date', startDate)
           .lte('date', endDate)
@@ -54,6 +58,11 @@ export function MonthlyBudgetsCard() {
       return budgetsData.map((budget, idx) => {
         const spent = expenses
           .filter(e => e.category_id === budget.category_id)
+          .filter(e => {
+            // Si el presupuesto es por proyecto, sumar solo gastos del proyecto.
+            if (budget.project_id) return e.project_id === budget.project_id
+            return true
+          })
           .reduce((sum, e) => sum + Number(e.amount), 0)
 
         const colors = colorMap[idx % colorMap.length]
@@ -66,6 +75,7 @@ export function MonthlyBudgetsCard() {
         }
       })
     },
+    enabled: !!userId,
   })
 
   if (isLoading) {

@@ -17,7 +17,6 @@ export default defineConfig({
         '**/*.config.{js,ts}',
         '**/*.d.ts',
         '**/types/**',
-        '.next/**',
       ],
     },
   },

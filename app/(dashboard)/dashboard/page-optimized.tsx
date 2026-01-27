@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { createClient } from '@/lib/supabase/server'
+import { useAuth } from '@/hooks/use-auth'
 import { DashboardStats } from '@/components/dashboard/dashboard-stats-optimized'
 import { DashboardCharts } from '@/components/dashboard/dashboard-charts-optimized'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions-optimized'
@@ -51,9 +51,12 @@ function TransactionsSkeleton() {
   )
 }
 
-export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+export default function DashboardPage() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return <StatsSkeleton />
+  }
 
   if (!user) return null
 
@@ -88,6 +91,3 @@ export default async function DashboardPage() {
     </div>
   )
 }
-
-// Configuración de revalidación
-export const revalidate = 180 // Revalidar cada 3 minutos

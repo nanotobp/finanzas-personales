@@ -3,31 +3,38 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getMonthEndDate } from '@/lib/utils'
 import { Target, AlertTriangle, CheckCircle } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 export function BudgetsSummary() {
   const supabase = createClient()
   const currentMonth = new Date().toISOString().slice(0, 7)
+  const { userId } = useAuth()
 
   const { data: stats } = useQuery({
     queryKey: ['budgets-summary', currentMonth],
     queryFn: async () => {
       const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const endDate = getMonthEndDate(currentMonth)
+
+      if (!userId) {
+        return { totalBudget: 0, totalBudgets: 0, overBudget: 0, onTrack: 0 }
+      }
 
       // Get budgets for current month (active ones: no end_date OR end_date >= current month)
       const { data: budgets } = await supabase
         .from('budgets')
         .select('*, categories(id)')
+        .eq('user_id', userId)
         .eq('month', currentMonth)
         .or(`end_date.is.null,end_date.gte.${currentMonth}`)
 
       // Get expenses by category for current month
       const { data: expenses } = await supabase
         .from('transactions')
-        .select('amount, category_id')
+        .select('amount, category_id, project_id')
+        .eq('user_id', userId)
         .eq('type', 'expense')
         .gte('date', startDate)
         .lte('date', endDate)
@@ -45,8 +52,18 @@ export function BudgetsSummary() {
       let onTrack = 0
       
       budgets?.forEach(budget => {
-        const spent = expensesByCategory?.[budget.category_id] || 0
-        const percentage = (spent / Number(budget.amount)) * 100
+        // Si el presupuesto es por proyecto, sumar solo los gastos del proyecto.
+        // Si no, sumar por categoría en todos los proyectos.
+        const spent = (expenses || [])
+          .filter(t => t.category_id === budget.category_id)
+          .filter(t => {
+            if (budget.project_id) return t.project_id === budget.project_id
+            return true
+          })
+          .reduce((sum, t) => sum + Number(t.amount), 0)
+
+        const total = Number(budget.amount)
+        const percentage = total > 0 ? (spent / total) * 100 : 0
         if (percentage >= 100) overBudget++
         else if (percentage < 80) onTrack++
       })
@@ -58,6 +75,7 @@ export function BudgetsSummary() {
         onTrack,
       }
     },
+    enabled: !!userId,
   })
 
   return (

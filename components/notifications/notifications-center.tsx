@@ -8,36 +8,37 @@ import { Button } from '@/components/ui/button'
 import { Bell, BellOff, Check, X, UserPlus, Calendar } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
-import Link from 'next/link'
+import { Link } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
 
 export function NotificationsCenter() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   // Notificaciones del sistema
   const { data: systemNotifications } = useQuery({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       const { data } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(10)
 
       return data || []
     },
+    enabled: !!userId,
     refetchInterval: 60000 // Refrescar cada minuto
   })
 
   // Notificaciones de prospectos (próximos contactos y reuniones)
   const { data: prospectNotifications } = useQuery({
-    queryKey: ['prospect-notifications'],
+    queryKey: ['prospect-notifications', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       const today = new Date()
       const nextWeek = new Date(today)
@@ -46,7 +47,7 @@ export function NotificationsCenter() {
       const { data: prospects } = await supabase
         .from('prospects')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .not('status', 'in', '(won,lost)')
         .or(`next_contact_date.lte.${nextWeek.toISOString().split('T')[0]},meeting_date.lte.${nextWeek.toISOString()}`)
         .order('next_contact_date', { ascending: true })
@@ -100,6 +101,7 @@ export function NotificationsCenter() {
 
       return notifications
     },
+    enabled: !!userId,
     refetchInterval: 60000
   })
 
@@ -185,7 +187,7 @@ export function NotificationsCenter() {
               )
 
               return isProspectNotif && notif.link ? (
-                <Link key={notif.id} href={notif.link}>
+                <Link key={notif.id} to={notif.link}>
                   {NotifContent}
                 </Link>
               ) : (

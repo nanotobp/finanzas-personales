@@ -9,10 +9,12 @@ import { Button } from '@/components/ui/button'
 import { formatCurrency, formatShortDate, getMonthEndDate } from '@/lib/utils'
 import { Search, Plus, Pencil, Trash2, FileText } from 'lucide-react'
 import { IncomeFormDialog } from './income-form-dialog'
+import { useAuth } from '@/hooks/use-auth'
 
 export function IncomeList() {
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { userId } = useAuth()
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedIncome, setSelectedIncome] = useState<any>(null)
@@ -36,12 +38,14 @@ export function IncomeList() {
   const { data: paidInvoices, isLoading: loadingInvoices } = useQuery({
     queryKey: ['paid-invoices', monthFilter],
     queryFn: async () => {
+      if (!userId) return []
       const startDate = `${monthFilter}-01`
       const endDate = getMonthEndDate(monthFilter)
 
       const { data } = await supabase
         .from('invoices')
         .select('*, client:clients(id, name)')
+        .eq('user_id', userId)
         .eq('status', 'paid')
         .not('paid_date', 'is', null)
         .gte('paid_date', startDate)
@@ -51,18 +55,21 @@ export function IncomeList() {
       return data || []
     },
     staleTime: 2 * 60 * 1000,
+    enabled: !!userId,
   })
 
   // Query para otros ingresos (no relacionados con facturas)
   const { data: otherIncome, isLoading: loadingOther } = useQuery({
     queryKey: ['other-income', monthFilter],
     queryFn: async () => {
+      if (!userId) return []
       const startDate = `${monthFilter}-01`
       const endDate = getMonthEndDate(monthFilter)
 
       const { data } = await supabase
         .from('transactions')
         .select('*, categories(name, icon, color), clients(name)')
+        .eq('user_id', userId)
         .eq('type', 'income')
         .gte('date', startDate)
         .lte('date', endDate)
@@ -71,6 +78,7 @@ export function IncomeList() {
       return data || []
     },
     staleTime: 2 * 60 * 1000,
+    enabled: !!userId,
   })
 
   const isLoading = loadingInvoices || loadingOther
@@ -299,4 +307,3 @@ export function IncomeList() {
     </div>
   )
 }
-

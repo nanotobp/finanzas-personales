@@ -28,37 +28,41 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { useAuth } from '@/hooks/use-auth'
 
 export function ClientsList() {
   const supabase = createClient()
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { userId } = useAuth()
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
   const [clientToDelete, setClientToDelete] = useState<any>(null)
 
   const { data: clients, isLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
+      if (!userId) return []
       const { data } = await supabase
         .from('clients')
         .select('*')
+        .eq('user_id', userId)
         .order('name')
 
       return data || []
     },
     staleTime: 3 * 60 * 1000, // Cache por 3 minutos
+    enabled: !!userId,
   })
 
   // Obtener o crear el cliente "Varios"
   const getVariousClient = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Usuario no autenticado')
+    if (!userId) throw new Error('Usuario no autenticado')
 
     // Buscar cliente "Varios" existente
     const { data: existing } = await supabase
       .from('clients')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('name', 'Varios')
       .single()
 
@@ -68,7 +72,7 @@ export function ClientsList() {
     const { data: newClient, error } = await supabase
       .from('clients')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         name: 'Varios',
         type: 'occasional',
         email: 'varios@sistema.local',

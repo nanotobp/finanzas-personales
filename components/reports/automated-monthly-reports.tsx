@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useState } from 'react'
 import { EmptyStateReports } from './empty-state-reports'
+import { useAuth } from '@/hooks/use-auth'
 
 interface AutomatedReport {
   id: string
@@ -46,6 +47,7 @@ interface GeneratedReport {
 
 export function AutomatedMonthlyReports() {
   const supabase = createClient()
+  const { userId } = useAuth()
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [selectedFrequency, setSelectedFrequency] = useState<'monthly' | 'quarterly' | 'yearly'>('monthly')
@@ -55,26 +57,25 @@ export function AutomatedMonthlyReports() {
   const { data: automatedReports, isLoading } = useQuery({
     queryKey: ['automated-reports'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user found')
+      if (!userId) throw new Error('No user found')
 
       const { data, error } = await supabase
         .from('automated_reports')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
       return data as AutomatedReport[]
     },
+    enabled: !!userId,
   })
 
   // Fetch generated reports history
   const { data: generatedReports } = useQuery({
     queryKey: ['generated-reports'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user found')
+      if (!userId) throw new Error('No user found')
 
       const { data, error } = await supabase
         .from('automated_reports')
@@ -83,12 +84,13 @@ export function AutomatedMonthlyReports() {
           report_type,
           frequency
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
 
       if (error) throw error
 
       // Get generated reports for these automated reports
       const reportIds = data.map(r => r.id)
+      if (reportIds.length === 0) return []
       const { data: generated, error: genError } = await supabase
         .from('generated_reports')
         .select('*')
@@ -99,18 +101,18 @@ export function AutomatedMonthlyReports() {
       if (genError) throw genError
       return generated as GeneratedReport[]
     },
+    enabled: !!userId,
   })
 
   // Create automated report
   const createReportMutation = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user found')
+      if (!userId) throw new Error('No user found')
 
       const { data, error } = await supabase
         .from('automated_reports')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           report_type: 'financial_summary',
           frequency: selectedFrequency,
           is_active: true,
@@ -160,12 +162,11 @@ export function AutomatedMonthlyReports() {
   // Generate report manually
   const generateReportMutation = useMutation({
     mutationFn: async (reportId: string) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user found')
+      if (!userId) throw new Error('No user found')
 
       // Call the stored procedure to generate report
       const { data, error } = await supabase.rpc('generate_monthly_report', {
-        p_user_id: user.id,
+        p_user_id: userId,
         p_report_id: reportId,
       })
 

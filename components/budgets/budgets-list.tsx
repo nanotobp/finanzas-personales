@@ -5,16 +5,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getMonthEndDate } from '@/lib/utils'
 import { Progress } from '@/components/ui/progress'
 import { Plus, Pencil, Trash2, Settings } from 'lucide-react'
 import { BudgetFormDialog } from './budget-form-dialog'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
 
 export function BudgetsList() {
   const supabase = createClient()
   const queryClient = useQueryClient()
-  const router = useRouter()
+  const navigate = useNavigate()
+  const { userId } = useAuth()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedBudget, setSelectedBudget] = useState<any>(null)
   const currentMonth = new Date().toISOString().slice(0, 7)
@@ -29,6 +31,8 @@ export function BudgetsList() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['monthly-budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets-summary'] })
     },
   })
 
@@ -36,17 +40,15 @@ export function BudgetsList() {
     queryKey: ['budgets', currentMonth],
     queryFn: async () => {
       const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const endDate = getMonthEndDate(currentMonth)
 
       // Get budgets with categories (active ones: no end_date OR end_date >= current month)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       const { data: budgets } = await supabase
         .from('budgets')
         .select('*, categories(name, icon, color)')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('month', currentMonth)
         .or(`end_date.is.null,end_date.gte.${currentMonth}`)
         .order('amount', { ascending: false })
@@ -54,29 +56,37 @@ export function BudgetsList() {
       // Get expenses for each category
       const budgetsWithSpent = await Promise.all(
         (budgets || []).map(async (budget) => {
-          const { data: expenses } = await supabase
+          let expensesQuery = supabase
             .from('transactions')
             .select('amount')
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .eq('type', 'expense')
             .eq('category_id', budget.category_id)
             .gte('date', startDate)
             .lte('date', endDate)
 
+          if (budget.project_id) {
+            expensesQuery = expensesQuery.eq('project_id', budget.project_id)
+          }
+
+          const { data: expenses } = await expensesQuery
+
           const spent = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0
-          const percentage = (spent / Number(budget.amount)) * 100
+          const total = Number(budget.amount)
+          const percentage = total > 0 ? (spent / total) * 100 : 0
 
           return {
             ...budget,
             spent,
             percentage: Math.min(percentage, 100),
-            remaining: Number(budget.amount) - spent,
+            remaining: total - spent,
           }
         })
       )
 
       return budgetsWithSpent
     },
+    enabled: !!userId,
   })
 
   const getStatusColor = (percentage: number) => {
@@ -117,7 +127,7 @@ export function BudgetsList() {
                 <Button 
                   variant="link" 
                   className="p-0 h-auto text-sm" 
-                  onClick={() => router.push('/settings')}
+                  onClick={() => navigate('/settings')}
                 >
                   Configuración
                 </Button>
@@ -126,7 +136,7 @@ export function BudgetsList() {
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
-                onClick={() => router.push('/settings')}
+                onClick={() => navigate('/settings')}
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Categorías

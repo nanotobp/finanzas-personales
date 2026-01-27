@@ -1,11 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useState, useRef } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { Home, Target, Plus, Bell, BarChart3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ProspectFormDialog } from '@/components/prospects/prospect-form-dialog'
+import { useQueryClient } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
+import { prefetchRouteData } from '@/lib/prefetch/route-data'
 
 const navItems = [
   {
@@ -40,8 +43,18 @@ interface BottomNavigationProps {
 }
 
 export function BottomNavigation({ onAddClick }: BottomNavigationProps) {
-  const pathname = usePathname()
+  const { pathname } = useLocation()
   const [prospectFormOpen, setProspectFormOpen] = useState(false)
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+  const { userId } = useAuth()
+  const prefetchedRoutes = useRef(new Set<string>())
+
+  const handlePrefetch = (href: string) => {
+    if (prefetchedRoutes.current.has(href)) return
+    prefetchedRoutes.current.add(href)
+    void prefetchRouteData({ route: href, queryClient, supabase, userId })
+  }
 
   const handleAddClick = () => {
     onAddClick?.()
@@ -88,7 +101,9 @@ export function BottomNavigation({ onAddClick }: BottomNavigationProps) {
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                to={item.href}
+                onMouseEnter={() => handlePrefetch(item.href)}
+                onFocus={() => handlePrefetch(item.href)}
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 min-w-[60px] py-2 transition-all",
                   isActive 

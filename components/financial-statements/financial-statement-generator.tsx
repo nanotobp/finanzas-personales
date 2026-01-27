@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast'
 import { formatCurrency } from '@/lib/utils'
 import { format, startOfMonth, startOfYear, getMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useAuth } from '@/hooks/use-auth'
 
 interface IncomeStatement {
   id: string
@@ -33,6 +34,7 @@ export function FinancialStatementGenerator() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const supabase = createClient()
+  const { userId } = useAuth()
 
   // Generar lista de meses de 2026 (enero a diciembre)
   const currentMonth = getMonth(new Date()) // 0-11
@@ -63,14 +65,13 @@ export function FinancialStatementGenerator() {
   const { data: projectsBreakdown } = useQuery({
     queryKey: ['projects-breakdown', selectedMonth],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No autenticado')
+      if (!userId) throw new Error('No autenticado')
 
       // Obtener todos los proyectos activos
       const { data: projects } = await supabase
         .from('projects')
         .select('id, name, color')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true)
         .order('name')
 
@@ -85,7 +86,7 @@ export function FinancialStatementGenerator() {
           const { data: transactions } = await supabase
             .from('transactions')
             .select('type, amount')
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .eq('project_id', project.id)
             .gte('date', monthStart.toISOString())
             .lte('date', monthEnd.toISOString())
@@ -109,17 +110,16 @@ export function FinancialStatementGenerator() {
 
       return breakdown.filter(p => p.income > 0 || p.expenses > 0)
     },
-    enabled: !!incomeStatement
+    enabled: !!incomeStatement && !!userId
   })
 
   // Mutation para generar estado de resultados
   const generateMutation = useMutation({
     mutationFn: async (month: string) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No autenticado')
+      if (!userId) throw new Error('No autenticado')
 
       const { data, error } = await supabase.rpc('generate_income_statement', {
-        p_user_id: user.id,
+        p_user_id: userId,
         p_period_month: month
       })
 

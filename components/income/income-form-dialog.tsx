@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/hooks/use-auth'
 
 const incomeSchema = z.object({
   amount: z.string().min(1, 'El monto es requerido'),
@@ -47,76 +48,77 @@ export function IncomeFormDialog({ open, onOpenChange, income }: IncomeFormDialo
   const queryClient = useQueryClient()
   const supabase = createClient()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { userId } = useAuth()
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', 'income'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
       
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('type', 'income')
         .order('name')
       
       if (error) throw error
       return data
     },
+    enabled: !!userId,
   })
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
       
       const { data, error } = await supabase
         .from('accounts')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('name')
       
       if (error) throw error
       return data
     },
+    enabled: !!userId,
   })
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
       
       const { data, error } = await supabase
         .from('clients')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true)
         .order('name')
       
       if (error) throw error
       return data
     },
+    enabled: !!userId,
   })
 
   const { data: projects = [] } = useQuery({
     queryKey: ['projects-active'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
       
       const { data, error } = await supabase
         .from('projects')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true)
         .order('name')
       
       if (error) throw error
       return data
     },
+    enabled: !!userId,
   })
 
   const {
@@ -146,11 +148,10 @@ export function IncomeFormDialog({ open, onOpenChange, income }: IncomeFormDialo
 
   const createMutation = useMutation({
     mutationFn: async (data: IncomeFormData) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const { error } = await supabase.from('transactions').insert({
-        user_id: user.id,
+        user_id: userId,
         type: 'income',
         amount: parseFloat(data.amount),
         description: data.description,

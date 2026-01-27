@@ -7,21 +7,22 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useAuth } from '@/hooks/use-auth'
 
 export function NetWorthChart() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: netWorthData, isLoading } = useQuery({
     queryKey: ['net-worth-history'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       // Obtener cuentas por mes
       const { data: accounts } = await supabase
         .from('accounts')
         .select('balance, created_at')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at')
 
       // Agregar datos por mes
@@ -56,6 +57,7 @@ export function NetWorthChart() {
         liabilities: data.liabilities,
       }))
     },
+    enabled: !!userId,
   })
 
   if (isLoading) {

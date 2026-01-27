@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { useAuth } from '@/hooks/use-auth'
 
 const subscriptionSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
@@ -44,6 +45,7 @@ export function SubscriptionFormDialog({ open, onOpenChange, subscription }: Sub
   const queryClient = useQueryClient()
   const supabase = createClient()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { userId } = useAuth()
 
   const {
     register,
@@ -84,11 +86,10 @@ export function SubscriptionFormDialog({ open, onOpenChange, subscription }: Sub
 
   const createMutation = useMutation({
     mutationFn: async (data: SubscriptionFormData) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const { error } = await supabase.from('subscriptions').insert({
-        user_id: user.id,
+        user_id: userId,
         name: data.name,
         amount: parseFloat(data.amount),
         billing_cycle: data.billing_cycle,
@@ -99,7 +100,8 @@ export function SubscriptionFormDialog({ open, onOpenChange, subscription }: Sub
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subscriptions'] })
+      queryClient.invalidateQueries({ queryKey: ['subscriptions', userId] })
+      queryClient.invalidateQueries({ queryKey: ['subscriptions-mobile', userId] })
       reset()
       onOpenChange(false)
     },
@@ -121,7 +123,8 @@ export function SubscriptionFormDialog({ open, onOpenChange, subscription }: Sub
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subscriptions'] })
+      queryClient.invalidateQueries({ queryKey: ['subscriptions', userId] })
+      queryClient.invalidateQueries({ queryKey: ['subscriptions-mobile', userId] })
       reset()
       onOpenChange(false)
     },

@@ -8,12 +8,10 @@ plantilla/
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
-
 # production
 /build
+/dist
+/.next
 
 # misc
 .DS_Store
@@ -29,12 +27,16 @@ yarn-error.log*
 .env
 .env.production
 
-# vercel
-.vercel
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
 # backups
 backup-*/
+
+# local admin scripts
+fix-user-password.js
+recreate-user.js
+test-login.js
+verify-balances.js
+reset-password-quick.js

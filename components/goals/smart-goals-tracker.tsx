@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast'
 import { formatCurrency } from '@/lib/utils'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useAuth } from '@/hooks/use-auth'
 
 interface SmartGoal {
   id: string
@@ -100,17 +101,17 @@ export function SmartGoalsTracker() {
   const supabase = createClient()
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { userId } = useAuth()
 
   const { data: goals, isLoading } = useQuery({
     queryKey: ['smart-goals'],
     queryFn: async (): Promise<SmartGoal[]> => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       const { data: goalsData } = await supabase
         .from('savings_goals')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('priority', { ascending: false })
 
       if (!goalsData) return []
@@ -154,13 +155,13 @@ export function SmartGoalsTracker() {
       )
 
       return goalsWithDetails
-    }
+    },
+    enabled: !!userId
   })
 
   const createGoalMutation = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const targetAmount = parseFloat(formData.target_amount)
       const monthsDiff = Math.ceil(
@@ -171,7 +172,7 @@ export function SmartGoalsTracker() {
       const { data, error } = await supabase
         .from('savings_goals')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           name: formData.name,
           specific_description: formData.specific_description,
           target_amount: targetAmount,
@@ -232,15 +233,14 @@ export function SmartGoalsTracker() {
 
   const addContributionMutation = useMutation({
     mutationFn: async ({ goalId, amount }: { goalId: string, amount: number }) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       // Registrar tracking diario
       await supabase
         .from('goal_daily_tracking')
         .insert({
           goal_id: goalId,
-          user_id: user.id,
+          user_id: userId,
           amount_contributed: amount,
           notes: contributionNotes,
           mood: selectedMood

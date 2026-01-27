@@ -7,15 +7,16 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { TrendingUp, TrendingDown, Users, Target } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { useAuth } from '@/hooks/use-auth'
 
 export function BenchmarkingDashboard() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: benchmarks } = useQuery({
-    queryKey: ['benchmarking-data'],
+    queryKey: ['benchmarking-data', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return null
+      if (!userId) return null
 
       // Obtener métricas del usuario actual
       const thisMonth = new Date().toISOString().substring(0, 7)
@@ -23,7 +24,7 @@ export function BenchmarkingDashboard() {
       const { data: userStats } = await supabase
         .from('user_financial_benchmarks')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('month', thisMonth + '-01')
         .single()
 
@@ -51,7 +52,8 @@ export function BenchmarkingDashboard() {
           goalsProgress: avgGoals
         }
       }
-    }
+    },
+    enabled: !!userId
   })
 
   if (!benchmarks) return null

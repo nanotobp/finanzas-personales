@@ -26,17 +26,11 @@ self.addEventListener('activate', (event) => {
 
 // Fetch - SIEMPRE desde la red, NUNCA cachear
 self.addEventListener('fetch', (event) => {
-  // Pasar todas las peticiones directamente a la red con headers no-cache
-  event.respondWith(
-    fetch(event.request, {
-      cache: 'no-store',
-      headers: {
-        ...event.request.headers,
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
-      }
-    }).catch(() => fetch(event.request))
-  );
+  // Importante: NO reescribir headers.
+  // Si se sobreescriben, se pierden headers críticos (apikey/Authorization)
+  // y se rompe Supabase y/o Server Actions.
+  const request = new Request(event.request, { cache: 'no-store' })
+  event.respondWith(fetch(request).catch(() => fetch(event.request)))
 });
 
 // Cache First Strategy

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { createClient } from '@/lib/supabase/client'
 import {
   Dialog,
@@ -24,6 +24,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ReceiptUploadMobile } from '@/components/receipt-upload-mobile'
 import { Camera, Image as ImageIcon } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/use-auth'
 
 interface QuickAddDialogProps {
   open: boolean
@@ -31,10 +32,11 @@ interface QuickAddDialogProps {
 }
 
 export function QuickAddDialog({ open, onOpenChange }: QuickAddDialogProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const supabase = createClient()
   const { toast } = useToast()
+  const { userId } = useAuth()
   
   const [type, setType] = useState<'expense' | 'income'>('expense')
   const [amount, setAmount] = useState('')
@@ -52,10 +54,12 @@ export function QuickAddDialog({ open, onOpenChange }: QuickAddDialogProps) {
       const { data } = await supabase
         .from('categories')
         .select('*')
+        .eq('user_id', userId)
         .eq('type', type)
         .order('name')
       return data || []
     },
+    enabled: !!userId,
   })
 
   // Fetch accounts
@@ -65,19 +69,20 @@ export function QuickAddDialog({ open, onOpenChange }: QuickAddDialogProps) {
       const { data } = await supabase
         .from('accounts')
         .select('*')
+        .eq('user_id', userId)
         .eq('is_active', true)
         .order('name')
       return data || []
     },
+    enabled: !!userId,
   })
 
   const createTransaction = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const { error } = await supabase.from('transactions').insert({
-        user_id: user.id,
+        user_id: userId,
         type,
         amount: parseFloat(amount),
         description,
@@ -94,18 +99,17 @@ export function QuickAddDialog({ open, onOpenChange }: QuickAddDialogProps) {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       onOpenChange(false)
       resetForm()
-      router.refresh()
+      navigate(0)
     },
   })
 
   const handleReceiptUpload = async (file: File) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       // Crear nombre único para el archivo
       const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`
+      const fileName = `${userId}/${Date.now()}.${fileExt}`
 
       // Subir a Supabase Storage
       const { error: uploadError, data } = await supabase.storage

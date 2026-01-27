@@ -10,11 +10,13 @@ import { Label } from '@/components/ui/label'
 import { User, Mail, Lock, MapPin, Save, Eye, EyeOff } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function UserProfilePage() {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const { user, userId } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
@@ -24,39 +26,38 @@ export default function UserProfilePage() {
     newPassword: ''
   })
 
-  const { data: user, isLoading } = useQuery({
-    queryKey: ['user-profile'],
+  const { data: profileData, isLoading } = useQuery({
+    queryKey: ['user-profile', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId || !user) throw new Error('No user')
 
       // Obtener metadata del usuario
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single()
 
       return {
-        id: user.id,
+        id: userId,
         email: user.email || '',
         full_name: profile?.full_name || user.user_metadata?.full_name || '',
         city: profile?.city || user.user_metadata?.city || '',
         created_at: user.created_at
       }
     },
+    enabled: !!userId,
   })
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      if (!currentUser) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       // Actualizar tabla profiles (con email incluido)
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
-          id: currentUser.id,
+          id: userId,
           email: data.email,
           full_name: data.full_name,
           city: data.city,
@@ -83,7 +84,7 @@ export default function UserProfilePage() {
     },
     onSuccess: () => {
       // Invalidar caché para refrescar datos inmediatamente
-      queryClient.invalidateQueries({ queryKey: ['user-profile'] })
+      queryClient.invalidateQueries({ queryKey: ['user-profile', userId] })
       
       toast({
         title: '✅ Perfil actualizado',
@@ -134,9 +135,9 @@ export default function UserProfilePage() {
 
   const handleEdit = () => {
     setFormData({
-      full_name: user?.full_name || '',
-      email: user?.email || '',
-      city: user?.city || '',
+      full_name: profileData?.full_name || '',
+      email: profileData?.email || '',
+      city: profileData?.city || '',
       newPassword: ''
     })
     setIsEditing(true)
@@ -203,7 +204,7 @@ export default function UserProfilePage() {
                 placeholder="Tu nombre completo"
               />
             ) : (
-              <p className="text-lg font-medium">{user?.full_name || 'No especificado'}</p>
+              <p className="text-lg font-medium">{profileData?.full_name || 'No especificado'}</p>
             )}
           </div>
 
@@ -222,7 +223,7 @@ export default function UserProfilePage() {
                 placeholder="tu@email.com"
               />
             ) : (
-              <p className="text-lg font-medium">{user?.email}</p>
+              <p className="text-lg font-medium">{profileData?.email}</p>
             )}
           </div>
 
@@ -240,7 +241,7 @@ export default function UserProfilePage() {
                 placeholder="Tu ciudad"
               />
             ) : (
-              <p className="text-lg font-medium">{user?.city || 'No especificado'}</p>
+              <p className="text-lg font-medium">{profileData?.city || 'No especificado'}</p>
             )}
           </div>
 
@@ -277,7 +278,7 @@ export default function UserProfilePage() {
           {/* Fecha de registro */}
           <div className="pt-4 border-t">
             <p className="text-sm text-muted-foreground">
-              Miembro desde: {new Date(user?.created_at || '').toLocaleDateString('es-ES', { 
+              Miembro desde: {new Date(profileData?.created_at || '').toLocaleDateString('es-ES', { 
                 year: 'numeric', 
                 month: 'long', 
                 day: 'numeric' 

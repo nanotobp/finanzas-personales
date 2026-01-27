@@ -17,23 +17,24 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Receipt, Percent } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 export function TaxSettings() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const supabase = createClient()
+  const { userId } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['tax-settings'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const { data, error } = await supabase
         .from('tax_settings')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single()
 
       if (error && error.code !== 'PGRST116') throw error
@@ -49,16 +50,16 @@ export function TaxSettings() {
         business_name: '',
       }
     },
+    enabled: !!userId,
   })
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const taxData = {
         ...data,
-        user_id: user.id,
+        user_id: userId,
         updated_at: new Date().toISOString(),
       }
 
@@ -66,14 +67,14 @@ export function TaxSettings() {
       const { data: existing } = await supabase
         .from('tax_settings')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single()
 
       if (existing) {
         const { error } = await supabase
           .from('tax_settings')
           .update(taxData)
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
         
         if (error) throw error
       } else {

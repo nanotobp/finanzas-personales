@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
 import { Download, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import ReactECharts from 'echarts-for-react'
+import { useAuth } from '@/hooks/use-auth'
 import { 
   Select,
   SelectContent,
@@ -18,6 +19,7 @@ import {
 
 export function ReportsView() {
   const supabase = createClient()
+  const { userId } = useAuth()
   const currentYear = new Date().getFullYear()
   const [selectedYear, setSelectedYear] = useState(currentYear)
   const [viewMode, setViewMode] = useState<'year' | 'month'>('year')
@@ -26,6 +28,7 @@ export function ReportsView() {
   const { data: yearlyData } = useQuery({
     queryKey: ['yearly-report', selectedYear],
     queryFn: async () => {
+      if (!userId) return []
       const months = []
       for (let i = 0; i < 12; i++) {
         const date = new Date(selectedYear, i, 1)
@@ -41,23 +44,20 @@ export function ReportsView() {
           const lastDay = new Date(year, monthNum, 0).getDate()
           const endDate = `${year}-${monthNum.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
 
-          const { data: { user } } = await supabase.auth.getUser()
-          if (!user) return { month, income: 0, expenses: 0, profit: 0 }
-
-          console.log(`Consultando datos para ${month}:`, { startDate, endDate, userId: user.id })
+          if (!userId) return { month, income: 0, expenses: 0, profit: 0 }
 
           const [{ data: income }, { data: allInvoices }, { data: expenses }] = await Promise.all([
             supabase
               .from('transactions')
               .select('amount')
-              .eq('user_id', user.id)
+              .eq('user_id', userId)
               .eq('type', 'income')
               .gte('date', startDate)
               .lte('date', endDate),
             supabase
               .from('invoices')
               .select('amount, paid_date')
-              .eq('user_id', user.id)
+              .eq('user_id', userId)
               .eq('status', 'paid')
               .not('paid_date', 'is', null)
               .gte('paid_date', startDate)
@@ -65,7 +65,7 @@ export function ReportsView() {
             supabase
               .from('transactions')
               .select('amount')
-              .eq('user_id', user.id)
+              .eq('user_id', userId)
               .eq('type', 'expense')
               .gte('date', startDate)
               .lte('date', endDate)
@@ -74,14 +74,6 @@ export function ReportsView() {
           const totalIncome = (income?.reduce((sum, t) => sum + Number(t.amount), 0) || 0)
             + (allInvoices?.reduce((sum, i) => sum + Number(i.amount), 0) || 0)
           const totalExpenses = expenses?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
-
-          console.log(`Resultados ${month}:`, { 
-            transactionsIncome: income?.length || 0,
-            paidInvoices: allInvoices?.length || 0, 
-            invoicesAmount: allInvoices?.reduce((sum, i) => sum + Number(i.amount), 0) || 0,
-            totalIncome,
-            totalExpenses 
-          })
 
           return {
             month,
@@ -94,13 +86,13 @@ export function ReportsView() {
 
       return results
     },
+    enabled: !!userId,
   })
 
   const { data: categoryBreakdown } = useQuery({
     queryKey: ['category-breakdown', selectedYear],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       const startDate = `${selectedYear}-01-01`
       const endDate = `${selectedYear}-12-31`
@@ -108,7 +100,7 @@ export function ReportsView() {
       const { data: expenses } = await supabase
         .from('transactions')
         .select('amount, categories(name, color)')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('type', 'expense')
         .gte('date', startDate)
         .lte('date', endDate)
@@ -129,13 +121,13 @@ export function ReportsView() {
 
       return Object.values(grouped || {})
     },
+    enabled: !!userId,
   })
 
   const { data: projectsBreakdown } = useQuery({
     queryKey: ['projects-breakdown', selectedYear],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       const startDate = `${selectedYear}-01-01`
       const endDate = `${selectedYear}-12-31`
@@ -144,7 +136,7 @@ export function ReportsView() {
       const { data: projects } = await supabase
         .from('projects')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
 
       if (!projects || projects.length === 0) return []
 
@@ -155,7 +147,7 @@ export function ReportsView() {
             supabase
               .from('transactions')
               .select('amount')
-              .eq('user_id', user.id)
+              .eq('user_id', userId)
               .eq('type', 'income')
               .eq('project_id', project.id)
               .gte('date', startDate)
@@ -163,7 +155,7 @@ export function ReportsView() {
             supabase
               .from('transactions')
               .select('amount')
-              .eq('user_id', user.id)
+              .eq('user_id', userId)
               .eq('type', 'expense')
               .eq('project_id', project.id)
               .gte('date', startDate)
@@ -187,6 +179,7 @@ export function ReportsView() {
       // Filtrar proyectos con actividad
       return projectsWithData.filter(p => p.income > 0 || p.expenses > 0)
     },
+    enabled: !!userId,
   })
 
   const totalIncome = yearlyData?.reduce((sum, m) => sum + m.income, 0) || 0

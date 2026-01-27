@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,6 +9,7 @@ import { LogOut, User, Search, Bell, Moon, Sun, TrendingDown, TrendingUp, Wallet
 import { useTheme } from 'next-themes'
 import { useSidebarPreferences, colorGradients } from '@/hooks/use-sidebar-preferences'
 import { cn, formatCurrency } from '@/lib/utils'
+import { useAuth } from '@/hooks/use-auth'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,11 +49,12 @@ interface SearchResult {
 }
 
 export function Header({ user }: HeaderProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
   const { isCollapsed, color } = useSidebarPreferences()
   const gradient = colorGradients[color as keyof typeof colorGradients] || colorGradients.violet
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -69,14 +71,13 @@ export function Header({ user }: HeaderProps) {
     const results: SearchResult[] = []
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!userId) return
 
       // Buscar en transacciones
       const { data: transactions } = await supabase
         .from('transactions')
         .select('id, description, amount, type, date')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .ilike('description', `%${searchQuery}%`)
         .limit(5)
 
@@ -96,7 +97,7 @@ export function Header({ user }: HeaderProps) {
       const { data: accounts } = await supabase
         .from('accounts')
         .select('id, name, balance, type')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .ilike('name', `%${searchQuery}%`)
         .limit(5)
 
@@ -115,7 +116,7 @@ export function Header({ user }: HeaderProps) {
       const { data: cards } = await supabase
         .from('cards')
         .select('id, name, last_four, balance')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .ilike('name', `%${searchQuery}%`)
         .limit(5)
 
@@ -134,7 +135,7 @@ export function Header({ user }: HeaderProps) {
       const { data: clients } = await supabase
         .from('clients')
         .select('id, name, email, type')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .ilike('name', `%${searchQuery}%`)
         .limit(5)
 
@@ -166,7 +167,7 @@ export function Header({ user }: HeaderProps) {
   }
 
   const handleSelectResult = (result: SearchResult) => {
-    router.push(result.href)
+    navigate(result.href)
     setSearchOpen(false)
     setSearchQuery('')
   }
@@ -174,8 +175,7 @@ export function Header({ user }: HeaderProps) {
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
+    navigate('/login')
   }
 
   return (
@@ -291,7 +291,7 @@ export function Header({ user }: HeaderProps) {
               variant="ghost" 
               size="icon" 
               className="md:hidden rounded-lg h-9 w-9"
-              onClick={() => router.push('/user-profile')}
+              onClick={() => navigate('/user-profile')}
             >
               <UserCircle className="h-5 w-5" />
             </Button>
@@ -321,7 +321,7 @@ export function Header({ user }: HeaderProps) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/user-profile')}>
+                <DropdownMenuItem onClick={() => navigate('/user-profile')}>
                   <User className="mr-2 h-4 w-4" />
                   Mi Perfil
                 </DropdownMenuItem>

@@ -3,7 +3,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import Link from 'next/link'
+import { Link } from 'react-router-dom'
 
 const payments = [
   {
@@ -46,7 +46,7 @@ export function PaymentsHistory() {
     <Card className="shadow-none p-0 border-0">
       <CardHeader className="flex flex-row items-center justify-between pb-4 px-0">
         <CardTitle>Historial de Pagos</CardTitle>
-        <Link href="#" className="text-sm text-primary hover:underline font-medium">
+        <Link to="#" className="text-sm text-primary hover:underline font-medium">
           Ver más
         </Link>
       </CardHeader>

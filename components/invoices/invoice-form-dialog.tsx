@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Plus } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 const invoiceSchema = z.object({
   client_id: z.string().min(1, 'El cliente es requerido'),
@@ -63,6 +64,7 @@ export function InvoiceFormDialog({ invoice, trigger }: InvoiceFormDialogProps) 
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceSchema),
@@ -112,8 +114,7 @@ export function InvoiceFormDialog({ invoice, trigger }: InvoiceFormDialogProps) 
   const mutation = useMutation({
     mutationFn: async (data: InvoiceFormData) => {
       // Obtener el user_id actual
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Usuario no autenticado')
+      if (!userId) throw new Error('Usuario no autenticado')
 
       const amount = parseFloat(data.amount)
       const ivaPercentage = parseFloat(data.iva_percentage || '10')
@@ -128,7 +129,7 @@ export function InvoiceFormDialog({ invoice, trigger }: InvoiceFormDialogProps) 
 
       const invoiceData = {
         ...data,
-        user_id: user.id,
+        user_id: userId,
         amount,
         subtotal,
         iva_amount: ivaAmount,

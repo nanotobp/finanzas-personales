@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/use-auth'
 
 // Simple keyword-based categorization (ML simplificado)
 const categoryKeywords = {
@@ -19,10 +20,10 @@ export function useSmartCategorization() {
   const supabase = createClient()
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { userId } = useAuth()
 
   const suggestCategory = async (description: string): Promise<{ categoryId: string | null, confidence: number }> => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { categoryId: null, confidence: 0 }
+    if (!userId) return { categoryId: null, confidence: 0 }
 
     const descLower = description.toLowerCase()
 
@@ -30,7 +31,7 @@ export function useSmartCategorization() {
     const { data: patterns } = await supabase
       .from('transaction_patterns')
       .select('suggested_category_id, confidence')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .ilike('description_pattern', `%${descLower}%`)
       .order('times_used', { ascending: false })
       .limit(1)
@@ -47,7 +48,7 @@ export function useSmartCategorization() {
     const { data: categories } = await supabase
       .from('categories')
       .select('id, name')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (!categories) return { categoryId: null, confidence: 0 }
 
@@ -60,7 +61,7 @@ export function useSmartCategorization() {
             await supabase
               .from('transaction_patterns')
               .upsert({
-                user_id: user.id,
+                user_id: userId,
                 description_pattern: descLower,
                 suggested_category_id: category.id,
                 confidence: 0.75,
@@ -86,12 +87,11 @@ export function useSmartCategorization() {
 
       if (transaction) {
         // Actualizar o crear patrón con mayor confianza
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
+        if (userId) {
           await supabase
             .from('transaction_patterns')
             .upsert({
-              user_id: user.id,
+              user_id: userId,
               description_pattern: transaction.description.toLowerCase(),
               suggested_category_id: categoryId,
               confidence: 0.95,

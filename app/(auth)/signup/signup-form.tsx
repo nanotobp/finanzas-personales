@@ -1,14 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export default function SignupForm() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -35,8 +35,7 @@ export default function SignupForm() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/dashboard')
-      router.refresh()
+      navigate('/dashboard')
     }
   }
 
@@ -95,7 +94,7 @@ export default function SignupForm() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.push('/login')}
+          onClick={() => navigate('/login')}
           className="w-full"
         >
           Ya tengo cuenta

@@ -5,6 +5,12 @@ import { PWAInstallPrompt } from './pwa-install-prompt'
 
 export function PWAProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
+    // En desarrollo, el registro del SW suele provocar 404 de chunks (main-app.js, layout.js, etc.)
+    // porque los bundles cambian rutas/hashes y el navegador puede quedar con preloads/requests viejos.
+    if (!import.meta.env.PROD) {
+      return
+    }
+
     // Registrar Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', async () => {

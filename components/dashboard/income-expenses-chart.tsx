@@ -5,15 +5,19 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useAuth } from '@/hooks/use-auth'
 
 const ReactECharts = lazy(() => import('echarts-for-react'))
 
 export function IncomeExpensesChart() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data, isLoading } = useQuery({
     queryKey: ['income-expenses-chart'],
     queryFn: async () => {
+      if (!userId) return []
+
       const now = new Date()
       const tenMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 9, 1)
 
@@ -21,11 +25,13 @@ export function IncomeExpensesChart() {
         supabase
           .from('transactions')
           .select('type, amount, date')
+          .eq('user_id', userId)
           .gte('date', tenMonthsAgo.toISOString().split('T')[0])
           .order('date'),
         supabase
           .from('invoices')
           .select('amount, paid_date')
+          .eq('user_id', userId)
           .eq('status', 'paid')
           .not('paid_date', 'is', null)
           .gte('paid_date', tenMonthsAgo.toISOString().split('T')[0])
@@ -75,6 +81,7 @@ export function IncomeExpensesChart() {
           }
         })
     },
+    enabled: !!userId,
   })
 
   const option = {
@@ -139,7 +146,7 @@ export function IncomeExpensesChart() {
         type: 'bar',
         data: data?.map(d => d.income) || [],
         itemStyle: {
-          color: '#16A249',
+          color: '#16A34A',
           borderRadius: [4, 4, 0, 0]
         },
         barWidth: 12
@@ -149,7 +156,7 @@ export function IncomeExpensesChart() {
         type: 'bar',
         data: data?.map(d => d.expenses) || [],
         itemStyle: {
-          color: '#e5e7eb',
+          color: '#DC2626',
           borderRadius: [4, 4, 0, 0]
         },
         barWidth: 12

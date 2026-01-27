@@ -21,10 +21,12 @@ import { CategoryFormDialog } from '@/components/categories/category-form-dialog
 import { useSidebarPreferences, colorGradients } from '@/hooks/use-sidebar-preferences'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function SettingsPage() {
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { userId } = useAuth()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<any>(null)
   const { color, setColor } = useSidebarPreferences()
@@ -42,37 +44,37 @@ export default function SettingsPage() {
   const { data: expenseCategories = [], isLoading: loadingExpenses } = useQuery({
     queryKey: ['categories', 'expense'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
       
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('type', 'expense')
         .order('name')
       
       if (error) throw error
       return data
     },
+    enabled: !!userId,
   })
 
   const { data: incomeCategories = [], isLoading: loadingIncome } = useQuery({
     queryKey: ['categories', 'income'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
       
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('type', 'income')
         .order('name')
       
       if (error) throw error
       return data
     },
+    enabled: !!userId,
   })
 
   const deleteMutation = useMutation({

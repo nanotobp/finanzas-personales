@@ -14,6 +14,7 @@ import { format, differenceInDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useAuth } from '@/hooks/use-auth'
 
 const ReactECharts = lazy(() => import('echarts-for-react'))
 
@@ -21,12 +22,14 @@ export function InvoicesList() {
   const supabase = createClient()
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { userId } = useAuth()
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [monthFilter, setMonthFilter] = useState<string>(new Date().toISOString().slice(0, 7))
 
   const { data: allInvoices, isLoading } = useQuery({
     queryKey: ['invoices'],
     queryFn: async () => {
+      if (!userId) return []
       const { data, error } = await supabase
         .from('invoices')
         .select(`
@@ -34,12 +37,14 @@ export function InvoicesList() {
           client:clients(name),
           category:categories(name, icon)
         `)
+        .eq('user_id', userId)
         .order('due_date', { ascending: false })
 
       if (error) throw error
       return data || []
     },
     staleTime: 2 * 60 * 1000, // Cache por 2 minutos
+    enabled: !!userId,
   })
 
   // Filtrar facturas por estado y mes

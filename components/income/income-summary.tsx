@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getMonthEndDate } from '@/lib/utils'
 import { TrendingUp, DollarSign, Users } from 'lucide-react'
 
 export function IncomeSummary() {
@@ -14,8 +14,7 @@ export function IncomeSummary() {
     queryKey: ['income-summary', currentMonth],
       queryFn: async () => {
         const startDate = `${currentMonth}-01`
-        const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-          .toISOString().split('T')[0]
+        const endDate = getMonthEndDate(currentMonth)
 
         // Ingresos directos
         const { data: income } = await supabase

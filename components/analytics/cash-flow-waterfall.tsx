@@ -5,15 +5,16 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts'
 import { TrendingDown } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 export function CashFlowWaterfall() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: cashFlowData = [] } = useQuery({
     queryKey: ['cash-flow-waterfall'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       // Último mes
       const startDate = new Date()
@@ -27,13 +28,13 @@ export function CashFlowWaterfall() {
         supabase
           .from('transactions')
           .select('type, amount, categories(name)')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .gte('date', startDate.toISOString().split('T')[0])
           .lte('date', endDate.toISOString().split('T')[0]),
         supabase
           .from('invoices')
           .select('amount')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('status', 'paid')
           .gte('paid_date', startDate.toISOString().split('T')[0])
           .lte('paid_date', endDate.toISOString().split('T')[0])
@@ -117,7 +118,8 @@ export function CashFlowWaterfall() {
       })
 
       return waterfallData
-    }
+    },
+    enabled: !!userId,
   })
 
   return (

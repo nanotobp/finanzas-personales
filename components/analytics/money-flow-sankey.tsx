@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts'
+import { useAuth } from '@/hooks/use-auth'
 
 const CustomTreemapContent = (props: any) => {
   const { x, y, width, height, name, value, totalExpenses } = props
@@ -51,12 +52,12 @@ const CustomTreemapContent = (props: any) => {
 
 export function MoneyFlowSankey() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: flowData, isLoading } = useQuery({
     queryKey: ['money-flow'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       // Últimos 30 días
       const thirtyDaysAgo = new Date()
@@ -65,7 +66,7 @@ export function MoneyFlowSankey() {
       const { data: transactions } = await supabase
         .from('transactions')
         .select('amount, type, categories(name, color)')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('type', 'expense')
         .gte('date', thirtyDaysAgo.toISOString())
         .limit(1000)
@@ -81,6 +82,7 @@ export function MoneyFlowSankey() {
 
       return Array.from(categoryMap.values()).sort((a, b) => b.value - a.value)
     },
+    enabled: !!userId,
   })
 
   if (isLoading) {

@@ -17,8 +17,8 @@ import {
   Clock,
   Award
 } from 'lucide-react'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { formatCurrency, getMonthEndDate } from '@/lib/utils'
+import { useAuth } from '@/hooks/use-auth'
 
 interface FinancialRecommendation {
   id: number
@@ -31,12 +31,12 @@ interface FinancialRecommendation {
 
 export const FinancialRecommendationsAdvanced = memo(function FinancialRecommendationsAdvanced() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: recommendations, isLoading } = useQuery({
     queryKey: ['financial-recommendations-advanced'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       const today = new Date()
       const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
@@ -57,14 +57,14 @@ export const FinancialRecommendationsAdvanced = memo(function FinancialRecommend
         { data: invoices },
         { data: cards },
       ] = await Promise.all([
-        supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(200),
-        supabase.from('accounts').select('*').eq('user_id', user.id),
-        supabase.from('budgets').select('*').eq('user_id', user.id),
-        supabase.from('categories').select('*').eq('user_id', user.id),
-        supabase.from('savings_goals').select('*').eq('user_id', user.id),
-        supabase.from('subscriptions').select('*').eq('user_id', user.id).eq('is_active', true),
-        supabase.from('invoices').select('*').eq('user_id', user.id),
-        supabase.from('cards').select('*').eq('user_id', user.id).eq('is_active', true),
+        supabase.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(200),
+        supabase.from('accounts').select('*').eq('user_id', userId),
+        supabase.from('budgets').select('*').eq('user_id', userId),
+        supabase.from('categories').select('*').eq('user_id', userId),
+        supabase.from('savings_goals').select('*').eq('user_id', userId),
+        supabase.from('subscriptions').select('*').eq('user_id', userId).eq('is_active', true),
+        supabase.from('invoices').select('*').eq('user_id', userId),
+        supabase.from('cards').select('*').eq('user_id', userId).eq('is_active', true),
       ])
 
       const recs: FinancialRecommendation[] = []
@@ -433,11 +433,12 @@ export const FinancialRecommendationsAdvanced = memo(function FinancialRecommend
         }
       })
 
-      // Ordenar por prioridad y limitar a top 60
+      // Ordenar por prioridad y limitar a top 3 más importantes
       return recs
         .sort((a, b) => b.priority - a.priority)
-        .slice(0, 60)
+        .slice(0, 3)
     },
+    enabled: !!userId,
   })
 
   const getIcon = (type: string) => {
@@ -478,17 +479,13 @@ export const FinancialRecommendationsAdvanced = memo(function FinancialRecommend
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5" />
-            Recomendaciones Financieras Inteligentes
-          </span>
-          <Badge variant="secondary">{recommendations?.length || 0} insights</Badge>
+        <CardTitle className="flex items-center gap-2">
+          <Lightbulb className="h-5 w-5" />
+          Recomendaciones Principales
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[500px] pr-4">
-          <div className="space-y-3">
+        <div className="space-y-3">
             {recommendations?.map((rec) => (
               <div
                 key={rec.id}
@@ -510,8 +507,7 @@ export const FinancialRecommendationsAdvanced = memo(function FinancialRecommend
                 </div>
               </div>
             ))}
-          </div>
-        </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   )

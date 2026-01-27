@@ -1,8 +1,18 @@
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+
+let client: ReturnType<typeof createSupabaseClient> | null = null
 
 export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  if (client) return client
+
+  const url = import.meta.env.NEXT_PUBLIC_SUPABASE_URL
+  const anonKey = import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!url || !anonKey) {
+    throw new Error('Faltan variables NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY')
+  }
+
+  client = createSupabaseClient(url, anonKey)
+
+  return client
 }

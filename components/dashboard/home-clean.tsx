@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, getMonthEndDate } from '@/lib/utils'
@@ -86,7 +86,7 @@ const categoryColors = [
 ]
 
 export function HomeClean() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const supabase = createClient()
   const currentMonth = new Date().toISOString().slice(0, 7)
 
@@ -176,7 +176,7 @@ export function HomeClean() {
             </p>
           </div>
           <button 
-            onClick={() => router.push('/profile')}
+            onClick={() => navigate('/profile')}
             className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center hover:shadow-lg transition-shadow"
           >
             <UserCircle className="h-5 w-5 text-white" />

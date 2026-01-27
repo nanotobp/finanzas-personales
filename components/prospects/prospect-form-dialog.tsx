@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { useEffect } from 'react'
+import { useAuth } from '@/hooks/use-auth'
 
 interface ProspectFormDialogProps {
   open: boolean
@@ -26,6 +27,7 @@ export function ProspectFormDialog({ open, onOpenChange, prospect }: ProspectFor
   const supabase = createClient()
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { userId } = useAuth()
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
 
   useEffect(() => {
@@ -43,12 +45,11 @@ export function ProspectFormDialog({ open, onOpenChange, prospect }: ProspectFor
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const prospectData = {
         ...data,
-        user_id: user.id,
+        user_id: userId,
         potential_amount: parseFloat(data.potential_amount) || 0,
         probability: parseInt(data.probability) || 50,
       }

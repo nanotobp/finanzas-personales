@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useAuth } from '@/hooks/use-auth'
 
 const accountSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
@@ -43,6 +44,7 @@ export function AccountFormDialog({ open, onOpenChange, account }: AccountFormDi
   const queryClient = useQueryClient()
   const supabase = createClient()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { userId } = useAuth()
 
   const {
     register,
@@ -67,11 +69,10 @@ export function AccountFormDialog({ open, onOpenChange, account }: AccountFormDi
 
   const createMutation = useMutation({
     mutationFn: async (data: AccountFormData) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const { error } = await supabase.from('accounts').insert({
-        user_id: user.id,
+        user_id: userId,
         name: data.name,
         type: data.type,
         balance: parseFloat(data.balance),

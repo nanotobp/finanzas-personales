@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { formatCurrency, getMonthEndDate } from '@/lib/utils'
+import { useAuth } from '@/hooks/use-auth'
 import {
   Calculator,
   TrendingUp,
@@ -53,6 +54,7 @@ interface AmortizationRow {
 
 export const FinancialCalculator = memo(function FinancialCalculator() {
   const supabase = createClient()
+  const { userId } = useAuth()
   
   // Estados del formulario
   const [purchaseMode, setPurchaseMode] = useState<PurchaseMode>('financing')
@@ -68,19 +70,10 @@ export const FinancialCalculator = memo(function FinancialCalculator() {
   const [totalInterest, setTotalInterest] = useState<number>(0)
   const [totalAmount, setTotalAmount] = useState<number>(0)
   
-  // Obtener datos financieros del usuario
-  const { data: userData } = useQuery({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      return user
-    },
-  })
-
   const { data: financialData, isLoading, error } = useQuery({
-    queryKey: ['financial-data', userData?.id],
+    queryKey: ['financial-data', userId],
     queryFn: async () => {
-      if (!userData?.id) return null
+      if (!userId) return null
 
       try {
         const today = new Date()
@@ -98,10 +91,10 @@ export const FinancialCalculator = memo(function FinancialCalculator() {
           { data: paidInvoices, error: invoicesError },
           { data: currentExpenses, error: expensesError }
         ] = await Promise.all([
-          supabase.from('accounts').select('balance').eq('user_id', userData.id),
-          supabase.from('transactions').select('amount').eq('user_id', userData.id).eq('type', 'income').gte('date', `${currentMonth}-01`).lte('date', currentMonthEnd),
-          supabase.from('invoices').select('amount').eq('user_id', userData.id).eq('status', 'paid').gte('paid_date', `${currentMonth}-01`).lte('paid_date', currentMonthEnd).not('paid_date', 'is', null),
-          supabase.from('transactions').select('amount').eq('user_id', userData.id).eq('type', 'expense').gte('date', `${currentMonth}-01`).lte('date', currentMonthEnd)
+          supabase.from('accounts').select('balance').eq('user_id', userId),
+          supabase.from('transactions').select('amount').eq('user_id', userId).eq('type', 'income').gte('date', `${currentMonth}-01`).lte('date', currentMonthEnd),
+          supabase.from('invoices').select('amount').eq('user_id', userId).eq('status', 'paid').gte('paid_date', `${currentMonth}-01`).lte('paid_date', currentMonthEnd).not('paid_date', 'is', null),
+          supabase.from('transactions').select('amount').eq('user_id', userId).eq('type', 'expense').gte('date', `${currentMonth}-01`).lte('date', currentMonthEnd)
         ])
 
         if (accountsError) {
@@ -142,9 +135,9 @@ export const FinancialCalculator = memo(function FinancialCalculator() {
             { data: lastPaidInvoices, error: lastInvoicesError },
             { data: lastExpenses, error: lastExpensesError }
           ] = await Promise.all([
-            supabase.from('transactions').select('amount').eq('user_id', userData.id).eq('type', 'income').gte('date', `${lastMonthStr}-01`).lte('date', lastMonthEnd),
-            supabase.from('invoices').select('amount').eq('user_id', userData.id).eq('status', 'paid').gte('paid_date', `${lastMonthStr}-01`).lte('paid_date', lastMonthEnd).not('paid_date', 'is', null),
-            supabase.from('transactions').select('amount').eq('user_id', userData.id).eq('type', 'expense').gte('date', `${lastMonthStr}-01`).lte('date', lastMonthEnd)
+            supabase.from('transactions').select('amount').eq('user_id', userId).eq('type', 'income').gte('date', `${lastMonthStr}-01`).lte('date', lastMonthEnd),
+            supabase.from('invoices').select('amount').eq('user_id', userId).eq('status', 'paid').gte('paid_date', `${lastMonthStr}-01`).lte('paid_date', lastMonthEnd).not('paid_date', 'is', null),
+            supabase.from('transactions').select('amount').eq('user_id', userId).eq('type', 'expense').gte('date', `${lastMonthStr}-01`).lte('date', lastMonthEnd)
           ])
 
           if (lastIncomeError) {
@@ -223,7 +216,7 @@ export const FinancialCalculator = memo(function FinancialCalculator() {
         throw error
       }
     },
-    enabled: !!userData?.id,
+    enabled: !!userId,
   })
 
   // Calcular amortización cuando cambian los parámetros

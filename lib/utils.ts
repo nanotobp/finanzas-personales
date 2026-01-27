@@ -25,6 +25,20 @@ export function formatCurrency(amount: number | string): string {
   }).format(numAmount)
 }
 
+// Formatear moneda como "Gs." (sin símbolo ₲)
+export function formatGs(amount: number | string): string {
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+
+  if (isNaN(numAmount)) return 'Gs. 0'
+
+  const formatted = new Intl.NumberFormat('es-PY', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(numAmount)
+
+  return `Gs. ${formatted}`
+}
+
 // Formatear fecha corta
 export function formatShortDate(date: string | Date): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date

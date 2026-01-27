@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { createClient } from '@/lib/supabase/server'
+import { useAuth } from '@/hooks/use-auth'
 import { SmartAlerts } from '@/components/dashboard/smart-alerts'
 import { FinancialHealthScore } from '@/components/dashboard/financial-health-score'
 import { FinancialHabits } from '@/components/habits/financial-habits'
@@ -21,9 +21,16 @@ function ComponentSkeleton() {
   )
 }
 
-export default async function AdvancedPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+export default function AdvancedPage() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="space-y-6 sm:space-y-8">
+        <ComponentSkeleton />
+      </div>
+    )
+  }
 
   if (!user) return null
 
@@ -113,5 +120,3 @@ export default async function AdvancedPage() {
     </div>
   )
 }
-
-export const revalidate = 180

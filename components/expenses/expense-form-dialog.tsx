@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
 import {
   Dialog,
   DialogContent,
@@ -23,6 +22,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { createExpense, fetchExpenseMeta, updateExpense } from '@/lib/services/expenses-service'
+import { useAuth } from '@/hooks/use-auth'
 
 const expenseSchema = z.object({
   amount: z.string().min(1, 'El monto es requerido'),
@@ -44,61 +45,19 @@ interface ExpenseFormDialogProps {
 
 export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDialogProps) {
   const queryClient = useQueryClient()
-  const supabase = createClient()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { userId } = useAuth()
 
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories', 'expense'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
-      
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('type', 'expense')
-        .order('name')
-      
-      if (error) throw error
-      return data
-    },
+  const { data: meta, isLoading: isMetaLoading } = useQuery({
+    queryKey: ['expenses-meta'],
+    queryFn: () => fetchExpenseMeta(userId as string),
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
   })
 
-  const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
-      
-      const { data, error } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name')
-      
-      if (error) throw error
-      return data
-    },
-  })
-
-  const { data: projects = [] } = useQuery({
-    queryKey: ['projects-active'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
-      
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('name')
-      
-      if (error) throw error
-      return data
-    },
-  })
+  const categories = meta?.categories ?? []
+  const accounts = meta?.accounts ?? []
+  const projects = meta?.projects ?? []
 
   const {
     register,
@@ -125,12 +84,8 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
 
   const createMutation = useMutation({
     mutationFn: async (data: ExpenseFormData) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
-
-      const { error } = await supabase.from('transactions').insert({
-        user_id: user.id,
-        type: 'expense',
+      return createExpense({
+        userId: userId as string,
         amount: parseFloat(data.amount),
         description: data.description,
         category_id: data.category_id,
@@ -139,8 +94,6 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
         project_id: data.project_id || null,
         notes: data.notes || null,
       })
-
-      if (error) throw error
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] })
@@ -148,6 +101,9 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['monthly-budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets'] })
       reset()
       onOpenChange(false)
     },
@@ -155,20 +111,16 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
 
   const updateMutation = useMutation({
     mutationFn: async (data: ExpenseFormData) => {
-      const { error } = await supabase
-        .from('transactions')
-        .update({
-          amount: parseFloat(data.amount),
-          description: data.description,
-          category_id: data.category_id,
-          account_id: data.account_id,
-          date: data.date,
-          project_id: data.project_id || null,
-          notes: data.notes || null,
-        })
-        .eq('id', expense.id)
-
-      if (error) throw error
+      return updateExpense(expense.id, {
+        userId: userId as string,
+        amount: parseFloat(data.amount),
+        description: data.description,
+        category_id: data.category_id,
+        account_id: data.account_id,
+        date: data.date,
+        project_id: data.project_id || null,
+        notes: data.notes || null,
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] })
@@ -176,6 +128,9 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['monthly-budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets'] })
       reset()
       onOpenChange(false)
     },
@@ -204,7 +159,9 @@ export function ExpenseFormDialog({ open, onOpenChange, expense }: ExpenseFormDi
           <DialogTitle>{expense ? 'Editar Gasto' : 'Nuevo Gasto'}</DialogTitle>
         </DialogHeader>
 
-        {categories.length === 0 || accounts.length === 0 ? (
+        {isMetaLoading ? (
+          <div className="p-4 text-sm text-gray-600">Cargando...</div>
+        ) : categories.length === 0 || accounts.length === 0 ? (
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800">
               {categories.length === 0 && accounts.length === 0

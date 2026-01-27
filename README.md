@@ -31,7 +31,7 @@ Ver [PWA-SETUP.md](./PWA-SETUP.md) para más detalles sobre la configuración PW
 
 ## Stack Tecnológico
 
-- **Frontend**: Next.js 14 + TypeScript + Tailwind CSS
+- **Frontend**: React + Vite + TypeScript + Tailwind CSS
 - **Backend**: Supabase (PostgreSQL + Auth + Storage)
 - **UI**: shadcn/ui + Radix UI
 - **Charts**: ECharts
@@ -55,15 +55,14 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+Abre [http://localhost:5173](http://localhost:5173) en tu navegador.
 
 ## Estructura del Proyecto
 
 ```
-├── app/                    # Next.js App Router
-│   ├── (auth)/            # Rutas de autenticación
-│   ├── (dashboard)/       # Rutas del dashboard
-│   └── api/               # API routes
+├── app/                    # Vistas agrupadas por feature
+│   ├── (auth)/            # Pantallas de autenticación
+│   └── (dashboard)/       # Pantallas del dashboard
 ├── components/            # Componentes React
 │   ├── ui/               # Componentes shadcn/ui
 │   ├── dashboard/        # Componentes del dashboard

@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useAuth } from '@/hooks/use-auth'
 
 const budgetSchema = z.object({
   category_id: z.string().min(1, 'La categoría es requerida'),
@@ -42,23 +43,24 @@ export function BudgetFormDialog({ open, onOpenChange, budget }: BudgetFormDialo
   const queryClient = useQueryClient()
   const supabase = createClient()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { userId } = useAuth()
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', 'expense'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
       
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('type', 'expense')
         .order('name')
       
       if (error) throw error
       return data
     },
+    enabled: !!userId,
   })
 
   const {
@@ -101,11 +103,10 @@ export function BudgetFormDialog({ open, onOpenChange, budget }: BudgetFormDialo
 
   const createMutation = useMutation({
     mutationFn: async (data: BudgetFormData) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const { error } = await supabase.from('budgets').insert({
-        user_id: user.id,
+        user_id: userId,
         category_id: data.category_id,
         amount: parseFloat(data.amount),
         month: data.month,
@@ -116,6 +117,8 @@ export function BudgetFormDialog({ open, onOpenChange, budget }: BudgetFormDialo
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['monthly-budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets-summary'] })
       reset()
       onOpenChange(false)
     },
@@ -137,6 +140,8 @@ export function BudgetFormDialog({ open, onOpenChange, budget }: BudgetFormDialo
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['monthly-budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets-summary'] })
       reset()
       onOpenChange(false)
     },

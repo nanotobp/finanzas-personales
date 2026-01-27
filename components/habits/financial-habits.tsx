@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { useAuth } from '@/hooks/use-auth'
 
 interface Habit {
   id: string
@@ -81,18 +82,18 @@ export function FinancialHabits() {
   const supabase = createClient()
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { userId } = useAuth()
 
   const { data: habits, isLoading } = useQuery({
     queryKey: ['financial-habits'],
     queryFn: async (): Promise<Habit[]> => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       // Obtener hábitos
       const { data: habitsData } = await supabase
         .from('financial_habits')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
 
@@ -175,18 +176,18 @@ export function FinancialHabits() {
       )
 
       return habitsWithStats
-    }
+    },
+    enabled: !!userId
   })
 
   const createHabitMutation = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const { error } = await supabase
         .from('financial_habits')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           ...formData
         })
 
@@ -212,14 +213,13 @@ export function FinancialHabits() {
 
   const completeHabitMutation = useMutation({
     mutationFn: async (habitId: string) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const { error } = await supabase
         .from('habit_completions')
         .insert({
           habit_id: habitId,
-          user_id: user.id,
+          user_id: userId,
           mood: 'good'
         })
 

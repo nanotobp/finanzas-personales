@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { useAuth } from '@/hooks/use-auth'
 
 const projectSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
@@ -37,6 +38,7 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
   const queryClient = useQueryClient()
   const supabase = createClient()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { userId } = useAuth()
 
   const {
     register,
@@ -76,11 +78,10 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
 
   const createMutation = useMutation({
     mutationFn: async (data: ProjectFormData) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const { error } = await supabase.from('projects').insert({
-        user_id: user.id,
+        user_id: userId,
         name: data.name,
         description: data.description || null,
         color: data.color || '#3B82F6',

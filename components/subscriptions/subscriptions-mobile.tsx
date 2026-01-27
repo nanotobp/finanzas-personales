@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/utils'
 import { Bell, Calendar, DollarSign, AlertCircle } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useAuth } from '@/hooks/use-auth'
 
 interface Subscription {
   id: string
@@ -18,22 +19,23 @@ interface Subscription {
 
 export function SubscriptionsMobile() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: subscriptions, isLoading } = useQuery({
-    queryKey: ['subscriptions-mobile'],
+    queryKey: ['subscriptions-mobile', userId],
     queryFn: async (): Promise<Subscription[]> => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       const { data } = await supabase
         .from('subscriptions')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true)
         .order('next_billing_date', { ascending: true })
 
       return data || []
     },
+    enabled: !!userId,
   })
 
   if (isLoading) {

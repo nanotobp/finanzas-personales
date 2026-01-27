@@ -2,11 +2,11 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Toaster } from '@/components/ui/toaster'
 import { PWAProvider } from '@/components/pwa-provider'
 import { useApplyTheme } from '@/hooks/use-sidebar-preferences'
-import dynamic from 'next/dynamic'
+import { AuthProvider } from '@/contexts/auth-context'
 
 // React Query Devtools deshabilitado
 // const ReactQueryDevtools = 
@@ -42,21 +42,23 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
-        <ThemeApplier>
-          <PWAProvider>
-            {children}
-            <Toaster />
-          </PWAProvider>
-        </ThemeApplier>
-      </ThemeProvider>
-      {/* ReactQueryDevtools deshabilitado */}
-      {/* <ReactQueryDevtools initialIsOpen={false} /> */}
+      <AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <ThemeApplier>
+            <PWAProvider>
+              {children}
+              <Toaster />
+            </PWAProvider>
+          </ThemeApplier>
+        </ThemeProvider>
+        {/* ReactQueryDevtools deshabilitado */}
+        {/* <ReactQueryDevtools initialIsOpen={false} /> */}
+      </AuthProvider>
     </QueryClientProvider>
   )
 }

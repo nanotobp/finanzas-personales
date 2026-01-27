@@ -6,15 +6,16 @@ import { createClient } from '@/lib/supabase/client'
 import { Flame, TrendingDown, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { useAuth } from '@/hooks/use-auth'
 
 export function BurnRate() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: burnRateData } = useQuery({
     queryKey: ['burn-rate'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return null
+      if (!userId) return null
 
       // Últimos 6 meses
       const sixMonthsAgo = new Date()
@@ -24,12 +25,12 @@ export function BurnRate() {
         supabase
           .from('transactions')
           .select('date, type, amount')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .gte('date', sixMonthsAgo.toISOString().split('T')[0]),
         supabase
           .from('invoices')
           .select('paid_date, amount')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('status', 'paid')
           .not('paid_date', 'is', null)
       ])
@@ -82,7 +83,7 @@ export function BurnRate() {
       const { data: accounts } = await supabase
         .from('accounts')
         .select('balance')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
 
       const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0
 
@@ -97,7 +98,8 @@ export function BurnRate() {
         totalBalance,
         runway
       }
-    }
+    },
+    enabled: !!userId,
   })
 
   const isHealthy = (burnRateData?.avgNetCashFlow || 0) >= 0

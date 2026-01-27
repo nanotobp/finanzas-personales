@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import Link from 'next/link'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Target } from 'lucide-react'
 
@@ -117,7 +117,7 @@ export function SmartGoalsSummary() {
           <div className="text-center py-12">
             <Target className="h-16 w-16 text-muted-foreground/40 mx-auto mb-4" />
             <p className="text-muted-foreground mb-4">No tienes objetivos SMART aún</p>
-            <Link href="/goals">
+            <Link to="/goals">
               <Button variant="outline" size="sm">
                 Crear Objetivo
               </Button>
@@ -132,7 +132,7 @@ export function SmartGoalsSummary() {
     <Card className="shadow-none p-0 border-0">
       <CardHeader className="px-0 flex flex-row items-center justify-between">
         <CardTitle>Objetivos SMART</CardTitle>
-        <Link href="/goals">
+        <Link to="/goals">
           <Button variant="ghost" size="sm">
             Ver todos
           </Button>

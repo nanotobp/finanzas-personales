@@ -4,7 +4,7 @@ import { useMemo, memo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getMonthEndDate } from '@/lib/utils'
 import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -34,22 +34,23 @@ export const DashboardStats = memo(function DashboardStats({ userId }: Dashboard
   const currentMonth = useMemo(() => new Date().toISOString().slice(0, 7), [])
 
   const { data: stats } = useQuery({
-    queryKey: ['dashboard-stats', currentMonth],
+    queryKey: ['dashboard-stats', currentMonth, userId],
     queryFn: async () => {
       const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const endDate = getMonthEndDate(currentMonth)
 
       // Optimización: Una sola query con todos los datos
       const [transactionsResult, accountsResult] = await Promise.all([
         supabase
           .from('transactions')
           .select('amount, type')
+          .eq('user_id', userId)
           .gte('date', startDate)
           .lte('date', endDate),
         supabase
           .from('accounts')
           .select('balance')
+          .eq('user_id', userId)
           .eq('is_active', true)
       ])
 

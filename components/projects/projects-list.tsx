@@ -5,13 +5,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getMonthEndDate } from '@/lib/utils'
 import { FolderKanban, TrendingUp, TrendingDown, Plus, Pencil, Trash2 } from 'lucide-react'
 import { ProjectFormDialog } from './project-form-dialog'
+import { useAuth } from '@/hooks/use-auth'
 
 export function ProjectsList() {
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { userId } = useAuth()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<any>(null)
   const currentMonth = new Date().toISOString().slice(0, 7)
@@ -32,13 +34,14 @@ export function ProjectsList() {
   const { data: projects, isLoading } = useQuery({
     queryKey: ['projects', currentMonth],
     queryFn: async () => {
+      if (!userId) return []
       const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const endDate = getMonthEndDate(currentMonth)
 
       const { data: projectsData } = await supabase
         .from('projects')
         .select('*')
+        .eq('user_id', userId)
         .order('name')
 
       // Get income and expenses for each project
@@ -47,6 +50,7 @@ export function ProjectsList() {
           const { data: income } = await supabase
             .from('transactions')
             .select('amount')
+            .eq('user_id', userId)
             .eq('type', 'income')
             .eq('project_id', project.id)
             .gte('date', startDate)
@@ -55,6 +59,7 @@ export function ProjectsList() {
           const { data: expenses } = await supabase
             .from('transactions')
             .select('amount')
+            .eq('user_id', userId)
             .eq('type', 'expense')
             .eq('project_id', project.id)
             .gte('date', startDate)
@@ -75,6 +80,7 @@ export function ProjectsList() {
 
       return projectsWithStats
     },
+    enabled: !!userId,
   })
 
   const activeProjects = projects?.filter(p => p.is_active) || []

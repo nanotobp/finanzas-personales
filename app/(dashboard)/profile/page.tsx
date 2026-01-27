@@ -6,12 +6,12 @@ import { formatCurrency, getMonthEndDate } from '@/lib/utils'
 import { Activity, TrendingUp, TrendingDown, PiggyBank, LogOut, AlertTriangle, DollarSign } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 
 export default function ProfilePage() {
   const supabase = createClient()
-  const router = useRouter()
+  const navigate = useNavigate()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const currentMonth = new Date().toISOString().slice(0, 7)
   const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 7)
@@ -66,7 +66,7 @@ export default function ProfilePage() {
     setIsLoggingOut(true)
     try {
       await supabase.auth.signOut()
-      router.push('/login')
+      navigate('/login')
     } catch (error) {
       console.error('Error logging out:', error)
       setIsLoggingOut(false)

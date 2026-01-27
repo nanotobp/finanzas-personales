@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/utils'
 import { Target, TrendingUp, Calendar, Flag } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useAuth } from '@/hooks/use-auth'
 
 interface Goal {
   id: string
@@ -18,17 +19,17 @@ interface Goal {
 
 export function GoalsMobile() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: goals, isLoading } = useQuery({
-    queryKey: ['goals-mobile'],
+    queryKey: ['goals-mobile', userId],
     queryFn: async (): Promise<Goal[]> => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       const { data } = await supabase
         .from('savings_goals')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('priority', { ascending: false })
 
       if (!data) return []
@@ -38,6 +39,7 @@ export function GoalsMobile() {
         progress_percentage: Number(goal.current_amount) / Number(goal.target_amount) * 100
       }))
     },
+    enabled: !!userId,
   })
 
   if (isLoading) {

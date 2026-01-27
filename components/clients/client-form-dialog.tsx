@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Plus } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 const clientSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
@@ -59,6 +60,7 @@ export function ClientFormDialog({ client, trigger }: ClientFormDialogProps) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const form = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
@@ -77,13 +79,12 @@ export function ClientFormDialog({ client, trigger }: ClientFormDialogProps) {
 
   const mutation = useMutation({
     mutationFn: async (data: ClientFormData) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Usuario no autenticado')
+      if (!userId) throw new Error('Usuario no autenticado')
 
       const clientData = {
         ...data,
         monthly_amount: data.monthly_amount ? parseFloat(data.monthly_amount) : null,
-        user_id: user.id,
+        user_id: userId,
       }
 
       if (client) {

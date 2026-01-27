@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { getMonthEndDate } from '@/lib/utils'
 
 const ReactECharts = lazy(() => import('echarts-for-react'))
 
@@ -27,12 +28,12 @@ export const DashboardCharts = memo(function DashboardCharts({ userId }: Dashboa
     queryKey: ['expenses-by-category', currentMonth],
     queryFn: async () => {
       const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const endDate = getMonthEndDate(currentMonth)
 
       const { data } = await supabase
         .from('transactions')
         .select('amount, categories(name, color)')
+        .eq('user_id', userId)
         .eq('type', 'expense')
         .gte('date', startDate)
         .lte('date', endDate)
@@ -53,6 +54,7 @@ export const DashboardCharts = memo(function DashboardCharts({ userId }: Dashboa
 
       return Object.values(grouped || {})
     },
+    enabled: !!userId,
     staleTime: 5 * 60 * 1000, // Cache por 5 minutos
     gcTime: 10 * 60 * 1000,
   })
@@ -71,12 +73,12 @@ export const DashboardCharts = memo(function DashboardCharts({ userId }: Dashboa
       const firstMonth = months[0]
       const lastMonth = months[months.length - 1]
       const startDate = `${firstMonth}-01`
-      const endDate = new Date(new Date(lastMonth).getFullYear(), new Date(lastMonth).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const endDate = getMonthEndDate(lastMonth)
 
       const { data: allTransactions } = await supabase
         .from('transactions')
         .select('amount, type, date')
+        .eq('user_id', userId)
         .gte('date', startDate)
         .lte('date', endDate)
 
@@ -99,6 +101,7 @@ export const DashboardCharts = memo(function DashboardCharts({ userId }: Dashboa
 
       return results
     },
+    enabled: !!userId,
     staleTime: 5 * 60 * 1000, // Cache por 5 minutos
     gcTime: 10 * 60 * 1000,
   })

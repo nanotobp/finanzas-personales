@@ -1,24 +1,25 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { DashboardLayoutClean } from '@/components/dashboard/dashboard-layout-clean'
-import { DashboardLayoutClient } from '@/components/dashboard/dashboard-layout-client'
+import { Navigate, Outlet } from 'react-router-dom'
 import { DashboardLayoutSelector } from '@/components/dashboard/dashboard-layout-selector'
+import { useAuth } from '@/hooks/use-auth'
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+export default function DashboardLayout() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Cargando...
+      </div>
+    )
+  }
 
   if (!user) {
-    redirect('/login')
+    return <Navigate to="/login" replace />
   }
 
   return (
-    <DashboardLayoutSelector user={user}>
-      {children}
+    <DashboardLayoutSelector user={{ email: user.email }}>
+      <Outlet />
     </DashboardLayoutSelector>
   )
 }

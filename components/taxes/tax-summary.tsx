@@ -3,42 +3,42 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getMonthEndDate } from '@/lib/utils'
 import { Receipt, TrendingUp, TrendingDown, Calculator, AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useAuth } from '@/hooks/use-auth'
 
 export function TaxSummary() {
   const supabase = createClient()
+  const { userId } = useAuth()
   const currentMonth = new Date().toISOString().slice(0, 7)
 
   const { data: summary, isLoading } = useQuery({
     queryKey: ['tax-summary', currentMonth],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().slice(0, 10)
+      const endDate = getMonthEndDate(currentMonth)
 
       // Obtener transacciones del mes e TODAS las facturas pagadas
       const [transactionsResult, invoicesResult, settingsResult] = await Promise.all([
         supabase
           .from('transactions')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .gte('date', startDate)
           .lte('date', endDate),
         supabase
           .from('invoices')
           .select('amount, iva_amount, irp_withheld, subtotal')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('status', 'paid')
           .not('paid_date', 'is', null),
         supabase
           .from('tax_settings')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .single()
       ])
 
@@ -83,6 +83,7 @@ export function TaxSummary() {
         gastos_totales: gastosTotales,
       }
     },
+    enabled: !!userId,
   })
 
   if (isLoading) {

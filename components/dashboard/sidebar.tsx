@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useState, useRef } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { ProspectFormDialog } from '@/components/prospects/prospect-form-dialog'
 import {
@@ -35,9 +34,14 @@ import {
   Percent,
   Calculator,
   UserPlus,
+  Lightbulb,
 } from 'lucide-react'
 import { useSidebarPreferences, colorGradients } from '@/hooks/use-sidebar-preferences'
 import { Button } from '@/components/ui/button'
+import { useQueryClient } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
+import { prefetchRouteData } from '@/lib/prefetch/route-data'
 
 interface NavigationSection {
   title: string
@@ -66,6 +70,12 @@ const navigationSections: NavigationSection[] = [
       { name: 'Análisis de Flujo', href: '/flow', icon: GitBranch },
       { name: 'Actividad', href: '/activity', icon: Calendar },
       { name: 'Tasa de Ahorro', href: '/savings-rate', icon: Activity },
+    ],
+  },
+  {
+    title: 'Recomendaciones',
+    items: [
+      { name: 'Insights Financieros', href: '/recommendations', icon: Lightbulb },
     ],
   },
   {
@@ -106,11 +116,21 @@ const navigationSections: NavigationSection[] = [
 ]
 
 export function Sidebar() {
-  const pathname = usePathname()
+  const { pathname } = useLocation()
   const [collapsedSections, setCollapsedSections] = useState<string[]>([])
   const [prospectFormOpen, setProspectFormOpen] = useState(false)
   const { isCollapsed, color, toggleCollapsed } = useSidebarPreferences()
   const gradient = colorGradients[color as keyof typeof colorGradients] || colorGradients.violet
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+  const { userId } = useAuth()
+  const prefetchedRoutes = useRef(new Set<string>())
+
+  const handlePrefetch = (href: string) => {
+    if (prefetchedRoutes.current.has(href)) return
+    prefetchedRoutes.current.add(href)
+    void prefetchRouteData({ route: href, queryClient, supabase, userId })
+  }
 
   const toggleSection = (title: string) => {
     setCollapsedSections((prev) =>
@@ -130,7 +150,7 @@ export function Sidebar() {
         <div className="flex h-16 items-center justify-between px-4 border-b">
           {!isCollapsed ? (
             <>
-              <Link href="/dashboard" className="flex items-center gap-3">
+              <Link to="/dashboard" className="flex items-center gap-3">
                 <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
                   <TrendingUp className="h-5 w-5 text-primary-foreground" />
                 </div>
@@ -188,7 +208,9 @@ export function Sidebar() {
                         return (
                           <Link
                             key={item.href}
-                            href={item.href}
+                            to={item.href}
+                            onMouseEnter={() => handlePrefetch(item.href)}
+                            onFocus={() => handlePrefetch(item.href)}
                             className={cn(
                               'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
                               isActive 
@@ -211,7 +233,7 @@ export function Sidebar() {
                         return (
                           <Link
                             key={item.href}
-                            href={item.href}
+                            to={item.href}
                             title={item.name}
                             className={cn(
                               'flex items-center justify-center rounded-lg p-2 transition-all mx-2',
@@ -241,7 +263,7 @@ export function Sidebar() {
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                to={item.href}
                 className={cn(
                   'flex flex-col items-center justify-center rounded-lg p-2 transition-colors min-w-[60px]',
                   isActive 
@@ -259,7 +281,7 @@ export function Sidebar() {
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                to={item.href}
                 className={cn(
                   'flex flex-col items-center justify-center rounded-lg p-2 transition-colors min-w-[60px]',
                   isActive 

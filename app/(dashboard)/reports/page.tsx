@@ -1,18 +1,9 @@
-import dynamic from 'next/dynamic'
+import { Suspense, lazy } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 
 // Lazy loading con suspense para optimizar bundle
-const ReportsView = dynamic(
-  () => import('@/components/reports/reports-view').then(mod => ({ default: mod.ReportsView })),
-  {
-    loading: () => (
-      <div className="space-y-4">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-[400px] w-full" />
-      </div>
-    ),
-    ssr: false
-  }
+const ReportsView = lazy(
+  () => import('@/components/reports/reports-view').then(mod => ({ default: mod.ReportsView }))
 )
 
 export default function ReportsPage() {
@@ -24,7 +15,16 @@ export default function ReportsPage() {
           Análisis y exportación de datos
         </p>
       </div>
-      <ReportsView />
+      <Suspense
+        fallback={(
+          <div className="space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-[400px] w-full" />
+          </div>
+        )}
+      >
+        <ReportsView />
+      </Suspense>
     </div>
   )
 }

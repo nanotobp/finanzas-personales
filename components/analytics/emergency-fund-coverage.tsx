@@ -6,21 +6,22 @@ import { createClient } from '@/lib/supabase/client'
 import { Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Progress } from '@/components/ui/progress'
+import { useAuth } from '@/hooks/use-auth'
 
 export function EmergencyFundCoverage() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: coverageData } = useQuery({
-    queryKey: ['emergency-fund-coverage'],
+    queryKey: ['emergency-fund-coverage', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return null
+      if (!userId) return null
 
       // Obtener balance total de cuentas
       const { data: accounts, error: accountsError } = await supabase
         .from('accounts')
         .select('balance')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
 
       if (accountsError) throw accountsError
 
@@ -33,7 +34,7 @@ export function EmergencyFundCoverage() {
       const { data: transactions, error: transactionsError } = await supabase
         .from('transactions')
         .select('amount')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('type', 'expense')
         .gte('date', threeMonthsAgo.toISOString().split('T')[0])
 
@@ -53,7 +54,8 @@ export function EmergencyFundCoverage() {
         targetMonths,
         percentage
       }
-    }
+    },
+    enabled: !!userId
   })
 
   const months = coverageData?.monthsCovered || 0

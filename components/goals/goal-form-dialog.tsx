@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/use-auth'
 
 const goalSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
@@ -39,6 +40,7 @@ export function GoalFormDialog({ goal, trigger }: GoalFormDialogProps) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const {
     register,
@@ -59,11 +61,10 @@ export function GoalFormDialog({ goal, trigger }: GoalFormDialogProps) {
 
   const mutation = useMutation({
     mutationFn: async (data: GoalFormData) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No autenticado')
+      if (!userId) throw new Error('No autenticado')
 
       const goalData = {
-        user_id: user.id,
+        user_id: userId,
         name: data.name,
         target_amount: parseFloat(data.target_amount),
         current_amount: parseFloat(data.current_amount || '0'),

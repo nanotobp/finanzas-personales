@@ -5,14 +5,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getMonthEndDate } from '@/lib/utils'
 import { CreditCard, AlertTriangle, Plus, Pencil, Trash2 } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 import { CardFormDialog } from './card-form-dialog'
+import { useAuth } from '@/hooks/use-auth'
 
 export function CardsList() {
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { userId } = useAuth()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedCard, setSelectedCard] = useState<any>(null)
 
@@ -32,22 +34,24 @@ export function CardsList() {
   const { data: cards, isLoading } = useQuery({
     queryKey: ['cards'],
     queryFn: async () => {
+      if (!userId) return []
       const { data } = await supabase
         .from('cards')
         .select('*')
+        .eq('user_id', userId)
         .order('name')
 
       // Get current expenses for each card
       const currentMonth = new Date().toISOString().slice(0, 7)
       const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
+      const endDate = getMonthEndDate(currentMonth)
 
       const cardsWithDebt = await Promise.all(
         (data || []).map(async (card) => {
           const { data: expenses } = await supabase
             .from('transactions')
             .select('amount')
+            .eq('user_id', userId)
             .eq('type', 'expense')
             .eq('card_id', card.id)
             .gte('date', startDate)
@@ -68,6 +72,7 @@ export function CardsList() {
       return cardsWithDebt
     },
     staleTime: 2 * 60 * 1000, // Cache por 2 minutos
+    enabled: !!userId,
   })
 
   const totalDebt = cards?.reduce((sum, c) => sum + (c.currentDebt || 0), 0) || 0

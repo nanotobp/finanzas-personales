@@ -5,15 +5,16 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/use-auth'
 
 export function ActivityHeatmap() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: heatmapData = [] } = useQuery({
     queryKey: ['activity-heatmap'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       // Últimos 90 días
       const startDate = new Date()
@@ -22,7 +23,7 @@ export function ActivityHeatmap() {
       const { data, error } = await supabase
         .from('transactions')
         .select('date, amount')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('type', 'expense')
         .gte('date', startDate.toISOString().split('T')[0])
         .order('date')
@@ -41,7 +42,8 @@ export function ActivityHeatmap() {
       }, {})
 
       return Object.values(grouped)
-    }
+    },
+    enabled: !!userId,
   })
 
   // Calcular el valor máximo para la escala de colores

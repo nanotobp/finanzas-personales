@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { createClient } from '@/lib/supabase/client'
 import {
   Sheet,
@@ -24,6 +24,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/hooks/use-toast'
 import { ArrowDownCircle, ArrowUpCircle, Upload, Camera, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/use-auth'
 
 interface QuickAddSheetProps {
   open: boolean
@@ -31,10 +32,11 @@ interface QuickAddSheetProps {
 }
 
 export function QuickAddSheet({ open, onOpenChange }: QuickAddSheetProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const supabase = createClient()
   const { toast } = useToast()
+  const { userId } = useAuth()
   
   const [type, setType] = useState<'expense' | 'income'>('expense')
   const [amount, setAmount] = useState('')
@@ -54,11 +56,12 @@ export function QuickAddSheet({ open, onOpenChange }: QuickAddSheetProps) {
       const { data } = await supabase
         .from('categories')
         .select('*')
+        .eq('user_id', userId)
         .eq('type', type)
         .order('name')
       return data || []
     },
-    enabled: open,
+    enabled: open && !!userId,
   })
 
   // Fetch accounts
@@ -68,11 +71,12 @@ export function QuickAddSheet({ open, onOpenChange }: QuickAddSheetProps) {
       const { data } = await supabase
         .from('accounts')
         .select('*')
+        .eq('user_id', userId)
         .eq('is_active', true)
         .order('name')
       return data || []
     },
-    enabled: open,
+    enabled: open && !!userId,
   })
 
   const resetForm = () => {
@@ -93,11 +97,10 @@ export function QuickAddSheet({ open, onOpenChange }: QuickAddSheetProps) {
     setUploadingReceipt(true)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`
+      const fileName = `${userId}/${Date.now()}.${fileExt}`
 
       const { error: uploadError, data } = await supabase.storage
         .from('receipts')
@@ -147,11 +150,10 @@ export function QuickAddSheet({ open, onOpenChange }: QuickAddSheetProps) {
     setIsSubmitting(true)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      if (!userId) throw new Error('No user')
 
       const { error } = await supabase.from('transactions').insert({
-        user_id: user.id,
+        user_id: userId,
         type,
         amount: parseFloat(amount),
         description: description || `${type === 'expense' ? 'Gasto' : 'Ingreso'} rápido`,
@@ -175,7 +177,7 @@ export function QuickAddSheet({ open, onOpenChange }: QuickAddSheetProps) {
       
       onOpenChange(false)
       resetForm()
-      router.refresh()
+      navigate(0)
     } catch (error) {
       console.error('Error creating transaction:', error)
       toast({

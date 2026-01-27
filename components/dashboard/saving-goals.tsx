@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import Link from 'next/link'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { PiggyBank } from 'lucide-react'
 
@@ -119,7 +119,7 @@ export function SavingGoals() {
           <div className="text-center py-8">
             <PiggyBank className="h-12 w-12 mx-auto mb-2 opacity-50 text-muted-foreground" />
             <p className="text-sm text-muted-foreground mb-3">No hay objetivos registrados</p>
-            <Link href="/goals">
+            <Link to="/goals">
               <Button size="sm" variant="outline">
                 Crear Objetivo
               </Button>
@@ -134,7 +134,7 @@ export function SavingGoals() {
     <Card className="shadow-none p-0 border-0">
       <CardHeader className="px-0 flex flex-row items-center justify-between">
         <CardTitle>Objetivos de Ahorro</CardTitle>
-        <Link href="/goals">
+        <Link to="/goals">
           <Button size="sm" variant="ghost">Ver todos</Button>
         </Link>
       </CardHeader>

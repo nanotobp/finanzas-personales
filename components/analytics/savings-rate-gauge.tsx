@@ -5,15 +5,16 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/use-auth'
 
 export function SavingsRateGauge() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: savingsData } = useQuery({
     queryKey: ['savings-rate'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return null
+      if (!userId) return null
 
       // Últimos 30 días
       const startDate = new Date()
@@ -23,12 +24,12 @@ export function SavingsRateGauge() {
         supabase
           .from('transactions')
           .select('type, amount')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .gte('date', startDate.toISOString().split('T')[0]),
         supabase
           .from('invoices')
           .select('amount')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('status', 'paid')
           .not('paid_date', 'is', null)
       ])
@@ -56,7 +57,8 @@ export function SavingsRateGauge() {
         savings: income - expenses,
         savingsRate: Math.max(0, Math.min(100, savingsRate))
       }
-    }
+    },
+    enabled: !!userId,
   })
 
   const rate = savingsData?.savingsRate || 0

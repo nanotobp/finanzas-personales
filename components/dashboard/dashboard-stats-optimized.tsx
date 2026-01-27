@@ -3,6 +3,7 @@
 import { useMemo, memo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
 import { Card } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
 import { Wallet, TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
@@ -77,13 +78,13 @@ MiniSparkline.displayName = 'MiniSparkline'
 
 export const DashboardStats = memo(function DashboardStats({ stats }: { stats: any }) {
   const supabase = createClient()
+  const { userId } = useAuth()
   
   // Obtener datos históricos para los gráficos
   const { data: chartData } = useQuery({
     queryKey: ['dashboard-charts-data'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return { incomeData: [], expensesData: [], balanceData: [] }
+      if (!userId) return { incomeData: [], expensesData: [], balanceData: [] }
 
       const now = new Date()
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
@@ -93,7 +94,7 @@ export const DashboardStats = memo(function DashboardStats({ stats }: { stats: a
       const { data: transactions } = await supabase
         .from('transactions')
         .select('date, type, amount')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .gte('date', startDate)
         .order('date', { ascending: true })
 
@@ -101,7 +102,7 @@ export const DashboardStats = memo(function DashboardStats({ stats }: { stats: a
       const { data: invoices } = await supabase
         .from('invoices')
         .select('paid_date, amount')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('status', 'paid')
         .not('paid_date', 'is', null)
         .gte('paid_date', startDate)
@@ -177,16 +178,22 @@ export const DashboardStats = memo(function DashboardStats({ stats }: { stats: a
         balanceData
       }
     },
+    enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   })
 
   const statCards = useMemo(() => [
     {
-      title: 'Saldo Total',
+      title: 'Mi Dinero',
       value: stats?.balance || 0,
       icon: Wallet,
       color: '#3b82f6',
       chartData: chartData?.balanceData || [],
+      extra: (
+        <span className="block text-xs text-muted-foreground mt-1">
+          Total en tus cuentas
+        </span>
+      ),
     },
     {
       title: 'Ingresos del Mes',
@@ -207,17 +214,10 @@ export const DashboardStats = memo(function DashboardStats({ stats }: { stats: a
       color: '#f43f5e',
       chartData: chartData?.expensesData || [],
     },
-    {
-      title: 'Balance Neto',
-      value: stats?.net || 0,
-      icon: DollarSign,
-      color: (stats?.net || 0) >= 0 ? '#10b981' : '#f43f5e',
-      chartData: chartData?.netData || [],
-    },
   ], [stats, chartData])
 
   return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
       {statCards.map((stat) => {
         const Icon = stat.icon
         

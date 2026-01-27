@@ -8,10 +8,12 @@ import { Button } from '@/components/ui/button'
 import { formatCurrency, formatShortDate } from '@/lib/utils'
 import { Repeat, AlertCircle, CheckCircle, Plus, Pencil, Trash2 } from 'lucide-react'
 import { SubscriptionFormDialog } from './subscription-form-dialog'
+import { useAuth } from '@/hooks/use-auth'
 
 export function SubscriptionsList() {
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { userId } = useAuth()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedSubscription, setSelectedSubscription] = useState<any>(null)
 
@@ -24,21 +26,25 @@ export function SubscriptionsList() {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subscriptions'] })
+      queryClient.invalidateQueries({ queryKey: ['subscriptions', userId] })
+      queryClient.invalidateQueries({ queryKey: ['subscriptions-mobile', userId] })
     },
   })
 
   const { data: subscriptions, isLoading } = useQuery({
-    queryKey: ['subscriptions'],
+    queryKey: ['subscriptions', userId],
     queryFn: async () => {
+      if (!userId) return []
       const { data } = await supabase
         .from('subscriptions')
         .select('*, categories(name, icon)')
+        .eq('user_id', userId)
         .order('next_billing_date', { ascending: true })
 
       return data || []
     },
     staleTime: 3 * 60 * 1000, // Cache por 3 minutos
+    enabled: !!userId,
   })
 
   const totalMonthly = subscriptions

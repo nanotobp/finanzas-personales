@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -16,9 +15,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ExpenseFormDialog } from './expense-form-dialog'
+import { deleteExpense, fetchExpenseMeta, fetchExpenses } from '@/lib/services/expenses-service'
+import { useAuth } from '@/hooks/use-auth'
 
 export function ExpensesList() {
-  const supabase = createClient()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -26,75 +26,49 @@ export function ExpensesList() {
   const [selectedExpense, setSelectedExpense] = useState<any>(null)
   const currentMonth = new Date().toISOString().slice(0, 7)
 
+  const { userId } = useAuth()
+
+  const metaQuery = useQuery({
+    queryKey: ['expenses-meta'],
+    queryFn: () => fetchExpenseMeta(userId as string),
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
+  })
+
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', id)
-      if (error) throw error
-    },
+    mutationFn: (id: string) => deleteExpense(id, userId as string),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['monthly-budgets'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['budgets'] })
     },
   })
 
-  const { data: categories } = useQuery({
-    queryKey: ['expense-categories'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('type', 'expense')
-        .order('name')
-      return data || []
-    },
-    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
-  })
+  const categories = metaQuery.data?.categories ?? []
 
-  const { data: expenses, isLoading } = useQuery({
+  const expensesQuery = useQuery({
     queryKey: ['expenses', currentMonth, categoryFilter],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
-
-      const startDate = `${currentMonth}-01`
-      const endDate = new Date(new Date(startDate).getFullYear(), new Date(startDate).getMonth() + 1, 0)
-        .toISOString().split('T')[0]
-
-      console.log('🔍 Query expenses:', { userId: user.id, startDate, endDate, categoryFilter })
-
-      let query = supabase
-        .from('transactions')
-        .select('*, categories(name, icon, color), accounts(name)')
-        .eq('user_id', user.id)
-        .eq('type', 'expense')
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: false })
-
-      if (categoryFilter !== 'all') {
-        query = query.eq('category_id', categoryFilter)
-      }
-
-      const { data, error } = await query
-      
-      console.log('📊 Expenses result:', { count: data?.length, error })
-      if (data) {
-        console.log('Expenses:', data)
-      }
-      
-      return data || []
-    },
-    staleTime: 0, // Desactivar caché temporalmente para debugging
+    queryFn: () =>
+      fetchExpenses({
+        month: currentMonth,
+        categoryId: categoryFilter !== 'all' ? categoryFilter : undefined,
+        userId: userId as string,
+      }),
+    enabled: !!userId,
+    staleTime: 30 * 1000,
   })
 
-  const filteredExpenses = expenses?.filter(expense =>
-    expense.description.toLowerCase().includes(search.toLowerCase())
+  const expenses = expensesQuery.data ?? []
+
+  const filteredExpenses = expenses.filter((expense) =>
+    String(expense.description ?? '')
+      .toLowerCase()
+      .includes(search.toLowerCase())
   )
 
-  const totalExpenses = filteredExpenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0
+  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + Number(e.amount ?? 0), 0)
 
   const handleEdit = (expense: any) => {
     setSelectedExpense(expense)
@@ -102,8 +76,12 @@ export function ExpensesList() {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('¿Estás seguro de eliminar este gasto?')) {
+    if (!confirm('¿Estás seguro de eliminar este gasto?')) return
+
+    try {
       await deleteMutation.mutateAsync(id)
+    } catch (e: any) {
+      alert(e?.message ?? 'Error al eliminar gasto')
     }
   }
 
@@ -157,7 +135,11 @@ export function ExpensesList() {
             <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
           </div>
 
-          {isLoading ? (
+          {metaQuery.isError || expensesQuery.isError ? (
+            <div className="text-center py-8 text-red-600 text-sm">
+              {String((metaQuery.error as any)?.message || (expensesQuery.error as any)?.message || 'Error')}
+            </div>
+          ) : metaQuery.isLoading || expensesQuery.isLoading ? (
             <div className="text-center py-8 text-gray-500">Cargando...</div>
           ) : (
             <div className="space-y-2">
@@ -181,28 +163,24 @@ export function ExpensesList() {
                           )}
                           <span>•</span>
                           <span>{formatShortDate(expense.date)}</span>
-                          <span
-                            className={`ml-2 px-2 py-0.5 rounded text-xs ${
-                              expense.status === 'confirmed'
-                                ? 'bg-green-100 text-green-700'
-                                : expense.status === 'reconciled'
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-yellow-100 text-yellow-700'
-                            }`}
-                          >
-                            {expense.status === 'confirmed'
-                              ? 'Confirmado'
-                              : expense.status === 'reconciled'
-                              ? 'Conciliado'
-                              : 'Pendiente'}
-                          </span>
+                          {expense.status !== 'confirmed' && (
+                            <span
+                              className={`ml-2 px-2 py-0.5 rounded text-xs ${
+                                expense.status === 'reconciled'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-yellow-100 text-yellow-700'
+                              }`}
+                            >
+                              {expense.status === 'reconciled' ? 'Conciliado' : 'Pendiente'}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-semibold text-red-600">
-                      -{formatCurrency(Number(expense.amount))}
+                      {formatCurrency(Number(expense.amount))}
                     </span>
                     <Button
                       variant="ghost"
@@ -215,6 +193,7 @@ export function ExpensesList() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(expense.id)}
+                      disabled={deleteMutation.isPending}
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>

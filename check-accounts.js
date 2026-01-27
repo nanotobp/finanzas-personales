@@ -14,24 +14,25 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 async function checkData() {
   console.log('🔍 Verificando datos en la base de datos...\n')
   
-  // Obtener usuario
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
-  
-  if (userError || !user) {
-    console.log('❌ No hay usuario autenticado')
-    console.log('Por favor inicia sesión en la aplicación primero\n')
+  // Obtener user_id desde env para evitar auth.getUser()
+  const userId = process.env.CHECK_USER_ID
+  const userEmail = process.env.CHECK_USER_EMAIL || '(email no provisto)'
+
+  if (!userId) {
+    console.log('❌ Falta CHECK_USER_ID en el entorno')
+    console.log('Ejecuta: CHECK_USER_ID="tu-user-id" node check-accounts.js\n')
     return
   }
   
-  console.log('✅ Usuario:', user.email)
-  console.log('🆔 User ID:', user.id)
+  console.log('✅ Usuario:', userEmail)
+  console.log('🆔 User ID:', userId)
   console.log('')
   
   // Verificar cuentas
   const { data: accounts, error: accountsError } = await supabase
     .from('accounts')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
   
   console.log('📊 CUENTAS (accounts):')
   if (accountsError) {
@@ -62,7 +63,7 @@ async function checkData() {
   const { data: transactions } = await supabase
     .from('transactions')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .gte('date', startDate)
     .lte('date', endDate)
   
@@ -84,7 +85,7 @@ async function checkData() {
   const { data: invoices } = await supabase
     .from('invoices')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('status', 'paid')
     .not('paid_date', 'is', null)
     .gte('paid_date', startDate)

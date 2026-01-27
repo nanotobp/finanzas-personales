@@ -16,6 +16,7 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, Area, AreaChart } from 'recharts'
 import { EmptyStateAnalytics } from './empty-state-analytics'
+import { useAuth } from '@/hooks/use-auth'
 
 interface CashflowPrediction {
   date: string
@@ -35,12 +36,12 @@ interface Insight {
 
 export const CashflowPredictiveAnalysis = memo(function CashflowPredictiveAnalysis() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['cashflow-predictions'],
+    queryKey: ['cashflow-predictions', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return null
+      if (!userId) return null
 
       // Obtener transacciones de los últimos 2 meses para análisis
       const twoMonthsAgo = new Date()
@@ -49,7 +50,7 @@ export const CashflowPredictiveAnalysis = memo(function CashflowPredictiveAnalys
       const { data: transactions } = await supabase
         .from('transactions')
         .select('amount, type, date')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .gte('date', twoMonthsAgo.toISOString())
         .order('date', { ascending: true })
 
@@ -93,7 +94,7 @@ export const CashflowPredictiveAnalysis = memo(function CashflowPredictiveAnalys
       const { data: accounts } = await supabase
         .from('accounts')
         .select('balance')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true)
 
       const currentBalance = accounts?.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0
@@ -179,7 +180,8 @@ export const CashflowPredictiveAnalysis = memo(function CashflowPredictiveAnalys
 
       return { predictions, insights, avgIncome, avgExpenses, currentBalance }
     },
-    refetchInterval: 24 * 60 * 60 * 1000 // Actualizar diariamente
+    refetchInterval: 24 * 60 * 60 * 1000, // Actualizar diariamente
+    enabled: !!userId
   })
 
   if (isLoading) {

@@ -5,15 +5,19 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useAuth } from '@/hooks/use-auth'
 
 const ReactECharts = lazy(() => import('echarts-for-react'))
 
 export function WeeklyExpenses() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data, isLoading } = useQuery({
     queryKey: ['weekly-expenses'],
     queryFn: async () => {
+      if (!userId) return { data: [], categories: [] }
+
       const now = new Date()
       const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1)
 
@@ -21,12 +25,14 @@ export function WeeklyExpenses() {
         supabase
           .from('transactions')
           .select('category_id, amount, date')
+          .eq('user_id', userId)
           .eq('type', 'expense')
           .gte('date', twelveMonthsAgo.toISOString().split('T')[0])
           .order('date'),
         supabase
           .from('categories')
           .select('id, name')
+          .eq('user_id', userId)
           .eq('type', 'expense')
           .limit(3)
       ])
@@ -67,14 +73,20 @@ export function WeeklyExpenses() {
 
       return { data: chartData, categories }
     },
+    enabled: !!userId,
   })
 
-  const categoryColors = ['#16A249', '#2DCE5E', '#6EE7B7']
+  const categoryColors = ['#DC2626', '#2563EB', '#16A34A', '#F59E0B', '#7C3AED', '#06B6D4']
   const option = {
     tooltip: {
       trigger: 'axis',
       axisPointer: {
         type: 'shadow'
+      },
+      valueFormatter: (value: any) => {
+        const num = Number(value)
+        if (Number.isNaN(num)) return String(value)
+        return `Gs. ${num.toLocaleString('es-PY')}`
       },
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
       borderColor: '#ccc',
@@ -116,7 +128,11 @@ export function WeeklyExpenses() {
       },
       axisLabel: {
         color: '#6b7280',
-        formatter: '${value}'
+        formatter: (value: any) => {
+          const num = Number(value)
+          if (Number.isNaN(num)) return String(value)
+          return `Gs. ${num.toLocaleString('es-PY')}`
+        }
       },
       splitLine: {
         lineStyle: {
@@ -128,12 +144,13 @@ export function WeeklyExpenses() {
     series: data?.categories.map((cat, idx) => ({
       name: cat.name,
       type: 'bar',
-      stack: 'total',
       data: data.data.map(d => d[`cat${idx + 1}`]),
       itemStyle: {
         color: categoryColors[idx % categoryColors.length],
-        borderRadius: idx === data.categories.length - 1 ? [20, 20, 0, 0] : undefined
-      }
+        borderRadius: [6, 6, 0, 0]
+      },
+      barGap: '20%',
+      barCategoryGap: '40%'
     })) || []
   }
 

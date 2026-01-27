@@ -5,15 +5,16 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { CalendarDays } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 export function SpendingByDayOfWeek() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: dayData = [] } = useQuery({
     queryKey: ['spending-by-day-of-week'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       // Últimos 30 días
       const startDate = new Date()
@@ -22,7 +23,7 @@ export function SpendingByDayOfWeek() {
       const { data, error } = await supabase
         .from('transactions')
         .select('date, amount')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('type', 'expense')
         .gte('date', startDate.toISOString().split('T')[0])
 
@@ -46,7 +47,8 @@ export function SpendingByDayOfWeek() {
         ...d,
         average: d.count > 0 ? d.total / d.count : 0
       }))
-    }
+    },
+    enabled: !!userId,
   })
 
   const maxValue = Math.max(...dayData.map((d: any) => d.total), 0)

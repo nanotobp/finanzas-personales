@@ -4,20 +4,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Building2 } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 export function TopMerchants() {
   const supabase = createClient()
+  const { userId } = useAuth()
 
   const { data: merchants = [] } = useQuery({
     queryKey: ['top-merchants'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
+      if (!userId) return []
 
       const { data, error } = await supabase
         .from('transactions')
         .select('description, amount')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('type', 'expense')
         .order('amount', { ascending: false })
         .limit(10)
@@ -38,7 +39,8 @@ export function TopMerchants() {
       return Object.values(grouped)
         .sort((a: any, b: any) => b.total - a.total)
         .slice(0, 10)
-    }
+    },
+    enabled: !!userId,
   })
 
   return (

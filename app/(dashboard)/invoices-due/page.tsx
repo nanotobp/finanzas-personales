@@ -3,16 +3,16 @@
 import { InvoicesDue } from '@/components/dashboard/invoices-due'
 import { useIsMobile } from '@/hooks/use-is-mobile'
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 
 export default function InvoicesDuePage() {
   const isMobile = useIsMobile()
-  const router = useRouter()
+  const navigate = useNavigate()
 
   useEffect(() => {
     // En desktop, redirigir a la página normal de facturas
     if (!isMobile) {
-      router.push('/invoices?filter=pending')
+      navigate('/invoices?filter=pending')
     }
   }, [isMobile, router])
 
